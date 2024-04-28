@@ -1,0 +1,51 @@
+.show-button {
+    display: none;
+}
+.button-holder {
+position: absolute;
+bottom: 30%;
+left: 50%;
+transform: translate(-50%, -20%);
+background-color: rgba(0, 0, 0, 0.5);
+display: block;
+width: 150px;
+height: 70px;
+border-radius: 20px;
+display: grid;
+place-items: center;
+border-bottom: 6px solid transparent;
+}
+.button-text {
+font-size: 25px;
+font-weight: 500;
+color: aliceblue;
+}
+.button-holder:hover {
+/* border-image: linear-gradient(var(--angle), purple, aqua, blue, magenta) 1;
+border-radius: 10px;
+animation: 10s rotate linear infinite; */
+
+/* border: double 5px transparent;
+border-radius: 80px;
+border-image: linear-gradient(var(--angle), purple, aqua, blue, magenta) 1;
+animation: 10s rotate linear infinite;
+background-origin: border-box;
+background-clip: padding-box, border-box; */
+background: 
+    linear-gradient(#ccc 0 0) padding-box, /*this is your grey background*/
+    linear-gradient(to right, #9c20aa, #fb3570) border-box;
+  color: #313149;
+  border: 5px solid transparent;
+  border-radius: 20px;
+}
+@keyframes rotate {
+to {
+    --angle: 360deg;
+}
+}
+
+@property --angle {
+syntax: "<angle>";
+initial-value: 0deg;
+inherits: false;
+}
