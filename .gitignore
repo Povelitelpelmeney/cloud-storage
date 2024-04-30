@@ -1,5 +1,5 @@
-upload-dir/
-.env
+root/
+.env.local
 
 HELP.md
 target/
