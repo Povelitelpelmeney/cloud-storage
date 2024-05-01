@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { NavigateFunction, useNavigate } from "react-router-dom";
 import { Formik, Field, Form, ErrorMessage } from "formik";
 import * as Yup from "yup";
@@ -9,7 +9,7 @@ type Props = {};
 type userInfo = {
   username: string;
   password: string;
-}
+};
 const Login: React.FC<Props> = () => {
   let navigate: NavigateFunction = useNavigate();
 
@@ -28,27 +28,22 @@ const Login: React.FC<Props> = () => {
 
   const handleLogin = (formValue: userInfo) => {
     const { username, password } = formValue;
-
     setMessage("");
     setLoading(true);
+    const fetchData = useCallback(async () => {
+      const response = await login(username, password);
+      navigate("/profile");
+      window.location.reload();
+    }, []);
 
-    login(username, password).then(
-      () => {
-        navigate("/profile");
-        window.location.reload();
-      },
-      (error) => {
+    useEffect(() => {
+      fetchData().catch((error) => {
         const resMessage =
-          (error.response &&
-            error.response.data &&
-            error.response.data.message) ||
-          error.message ||
-          error.toString();
-
+          error?.response?.data?.message || error.message || error.toString();
         setLoading(false);
         setMessage(resMessage);
-      }
-    );
+      });
+    }, [fetchData]);
   };
 
   return (

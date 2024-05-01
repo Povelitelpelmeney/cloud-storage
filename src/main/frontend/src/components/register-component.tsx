@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Formik, Field, Form, ErrorMessage } from "formik";
 import * as Yup from "yup";
 
@@ -39,24 +39,23 @@ const Register: React.FC = () => {
 
   const handleRegister = (formValue: IUser) => {
     const { username, email, password } = formValue;
-
-    register(username as string, email as string, password as string).then(
-      (response) => {
-        setMessage(response.data.message);
-        setSuccessful(true);
-      },
-      (error) => {
+    const fetchData = useCallback(async () => {
+      const response = await register(
+        username as string,
+        email as string,
+        password as string
+      );
+      setMessage(response.data.message);
+      setSuccessful(true);
+    }, []);
+    useEffect(() => {
+      fetchData().catch((error) => {
         const resMessage =
-          (error.response &&
-            error.response.data &&
-            error.response.data.message) ||
-          error.message ||
-          error.toString();
-
+          error?.response?.data?.message || error.message || error.toString();
         setMessage(resMessage);
         setSuccessful(false);
-      }
-    );
+      });
+    }, [fetchData]);
   };
 
   return (
