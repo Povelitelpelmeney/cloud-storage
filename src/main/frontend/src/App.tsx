@@ -1,18 +1,15 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
   NavLink,
-  Link,
 } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.scss";
 import * as AuthService from "./services/auth-service";
 import IUser from "./types/user-type";
-import Display from "./components/Display/display";
-
+import LoadButton from "./components/loadButton/loadButton";
 import Login from "./components/login-component";
 import Register from "./components/register-component";
 import Home from "./components/home";
@@ -31,7 +28,6 @@ import EventBus from "./common/eventBus";
 //   );
 // }
 const App: React.FC = () => {
-  const [showModeratorBoard, setShowModeratorBoard] = useState<boolean>(false);
   const [showAdminBoard, setShowAdminBoard] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<IUser | undefined>(undefined);
 
@@ -52,7 +48,6 @@ const App: React.FC = () => {
 
   const logOut = () => {
     AuthService.logout();
-    setShowModeratorBoard(false);
     setShowAdminBoard(false);
     setCurrentUser(undefined);
   };
@@ -129,6 +124,7 @@ const App: React.FC = () => {
         <Route path="/admin" element={<BoardAdmin />} />
       </Routes>
       <div className="presentation"></div>
+      <div><LoadButton /></div>
       <footer>All right reserved &copy;</footer>;
     </div>
   );

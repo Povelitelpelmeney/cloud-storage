@@ -20,8 +20,7 @@ export const login = (username: string, password: string) => {
       if (response.data.accessToken) {
         localStorage.setItem("user", JSON.stringify(response.data));
       }
-
-      return response.data;
+      return response.data.accessToken;
     });
 };
 

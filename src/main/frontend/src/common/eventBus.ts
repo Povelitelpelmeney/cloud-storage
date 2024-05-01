@@ -1,6 +1,6 @@
 const eventBus = {
   on(event: string, callback: EventListener) {
-    document.addEventListener(event, (e) => callback(e));
+    document.addEventListener(event, callback);
   },
   dispatch(event: string, data?: any) {
     document.dispatchEvent(new CustomEvent(event, { detail: data }));

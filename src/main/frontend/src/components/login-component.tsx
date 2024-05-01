@@ -6,17 +6,17 @@ import * as Yup from "yup";
 import { login } from "../services/auth-service";
 
 type Props = {};
-
+type userInfo = {
+  username: string;
+  password: string;
+}
 const Login: React.FC<Props> = () => {
   let navigate: NavigateFunction = useNavigate();
 
   const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
 
-  const initialValues: {
-    username: string;
-    password: string;
-  } = {
+  const initialValues: userInfo = {
     username: "",
     password: "",
   };
@@ -26,7 +26,7 @@ const Login: React.FC<Props> = () => {
     password: Yup.string().required("This field is required!"),
   });
 
-  const handleLogin = (formValue: { username: string; password: string }) => {
+  const handleLogin = (formValue: userInfo) => {
     const { username, password } = formValue;
 
     setMessage("");
