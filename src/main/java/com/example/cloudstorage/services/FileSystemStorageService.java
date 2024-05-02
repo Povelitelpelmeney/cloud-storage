@@ -2,7 +2,6 @@ package com.example.cloudstorage.services;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -12,19 +11,19 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.List;
 
-import com.example.cloudstorage.exceptions.StorageException;
-import com.example.cloudstorage.exceptions.StorageFileNotFoundException;
-import com.example.cloudstorage.exceptions.StorageInvalidRequestException;
-import com.example.cloudstorage.properties.StorageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-@Service
+import com.example.cloudstorage.exceptions.storage.StorageException;
+import com.example.cloudstorage.exceptions.storage.StorageFileNotFoundException;
+import com.example.cloudstorage.exceptions.storage.StorageInvalidRequestException;
+import com.example.cloudstorage.properties.StorageProperties;
+
 @SuppressWarnings("unused")
+@Service
 public class FileSystemStorageService implements StorageService {
     private final Path root;
 
@@ -47,11 +46,9 @@ public class FileSystemStorageService implements StorageService {
     @Override
     public Path load(Path path) {
         Path file = this.root.resolve(path);
-        System.out.println(file);
-        System.out.println(this.root);
-        if (!Files.exists(file))
-            throw new StorageFileNotFoundException("Could not find a file");
 
+        if (!Files.exists(file))
+            throw new StorageFileNotFoundException();
         return file;
     }
 
@@ -69,15 +66,15 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
-    public Resource loadAsResource(Path path) {
+    public ByteArrayResource loadAsResource(Path path) {
         Path file = this.load(path);
         if (Files.isDirectory(file))
             throw new StorageInvalidRequestException("Cannot load a directory as a resource");
 
         try {
-            return new UrlResource(file.toUri());
-        } catch (MalformedURLException e) {
-            throw new StorageException("Malformed path to the file");
+            return new ByteArrayResource(Files.readAllBytes(file));
+        } catch (IOException e) {
+            throw new StorageException("Could not read a file");
         }
     }
 

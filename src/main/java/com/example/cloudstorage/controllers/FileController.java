@@ -1,23 +1,5 @@
 package com.example.cloudstorage.controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.example.cloudstorage.services.StorageService;
-import com.example.cloudstorage.payload.response.FileResponse;
-import com.example.cloudstorage.exceptions.StorageException;
-import com.example.cloudstorage.exceptions.StorageFileNotFoundException;
-import com.example.cloudstorage.exceptions.StorageInvalidRequestException;
-import com.example.cloudstorage.payload.response.ApiError;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,9 +10,25 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RequestMapping("/api/storage")
-@RestController
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.cloudstorage.services.StorageService;
+import com.example.cloudstorage.payload.response.FileResponse;
+import com.example.cloudstorage.exceptions.storage.StorageException;
+import com.example.cloudstorage.exceptions.storage.StorageInvalidRequestException;
+
 @SuppressWarnings("unused")
+@RestController
+@RequestMapping("/api/storage")
 public class FileController {
     @Autowired
     private StorageService storageService;
@@ -40,11 +38,14 @@ public class FileController {
     public ResponseEntity<FileResponse> load(@PathVariable String path) throws IOException {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
+
         UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = user.getUsername();
 
         Path file = this.storageService.load(Paths.get(username, path));
-        return ResponseEntity.ok().body(this.buildFileResponse(file));
+        FileResponse response = this.buildFileResponse(file);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/files/{*path}")
@@ -59,7 +60,8 @@ public class FileController {
                 .sorted(Comparator.comparing(FileResponse::getLastModified))
                 .sorted(Comparator.comparing(FileResponse::getType))
                 .collect(Collectors.toList());
-        return ResponseEntity.ok().body(responses);
+
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/load/{*path}")
@@ -67,13 +69,22 @@ public class FileController {
     public ResponseEntity<Resource> downloadFile(@PathVariable String path) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
+
         UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = user.getUsername();
 
-        Resource file = storageService.loadAsResource(Paths.get(username, path));
+        ByteArrayResource file = this.storageService.loadAsResource(Paths.get(username, path));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"");
+        headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
+        headers.add("Pragma", "no-cache");
+        headers.add("Expires", "0");
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + file.getFilename() + "\"")
+                .headers(headers)
+                .contentLength(file.contentLength())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(file);
     }
 
@@ -85,7 +96,9 @@ public class FileController {
         String username = user.getUsername();
 
         Path file = this.storageService.uploadFile(Paths.get(username, path), multipartFile);
-        return ResponseEntity.ok().body(this.buildFileResponse(file));
+        FileResponse response = this.buildFileResponse(file);
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/files/{*path}")
@@ -95,13 +108,15 @@ public class FileController {
         UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = user.getUsername();
 
-        List<FileResponse> files = Arrays.stream(multipartFiles)
-                .map(multipartFile -> this.storageService.uploadFile(Paths.get(username, path), multipartFile))
+        List<FileResponse> responses = Arrays.stream(multipartFiles)
+                .map(multipartFile -> this.storageService
+                        .uploadFile(Paths.get(username, path), multipartFile))
                 .map(this::buildFileResponse)
                 .sorted(Comparator.comparing(FileResponse::getLastModified))
                 .sorted(Comparator.comparing(FileResponse::getType))
                 .toList();
-        return ResponseEntity.ok().body(files);
+
+        return ResponseEntity.ok(responses);
     }
 
     @PostMapping("/dir/{*path}")
@@ -112,7 +127,9 @@ public class FileController {
         String username = user.getUsername();
 
         Path directory = this.storageService.createDirectory(Paths.get(username, path), name);
-        return ResponseEntity.ok().body(this.buildFileResponse(directory));
+        FileResponse response = this.buildFileResponse(directory);
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/file/{*path}")
@@ -121,11 +138,14 @@ public class FileController {
                                              @RequestParam("target") String name) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to move a root folder");
+
         UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = user.getUsername();
 
         Path file = this.storageService.move(Paths.get(username, path), name);
-        return ResponseEntity.ok().body(this.buildFileResponse(file));
+        FileResponse response = this.buildFileResponse(file);
+
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/file/{*path}")
@@ -134,55 +154,27 @@ public class FileController {
                                                @RequestParam("name") String name) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to rename a root folder");
+
         UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = user.getUsername();
 
         Path file = this.storageService.rename(Paths.get(username, path), name);
-        return ResponseEntity.ok().body(this.buildFileResponse(file));
+        FileResponse response = this.buildFileResponse(file);
+
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/file/{*path}")
     public ResponseEntity<?> delete(@PathVariable String path) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to delete a root folder");
+
         UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = user.getUsername();
 
         this.storageService.delete(Paths.get(username, path));
+
         return ResponseEntity.ok().build();
-    }
-
-    @ExceptionHandler(StorageFileNotFoundException.class)
-    protected ResponseEntity<?> handleStorageFileNotFound(StorageFileNotFoundException e,
-                                                          HttpServletRequest request) {
-        ApiError apiError = new ApiError(
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
-                e, request.getRequestURI()
-        );
-        return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(StorageInvalidRequestException.class)
-    protected ResponseEntity<?> handleStorageInvalidRequest(StorageInvalidRequestException e,
-                                                            HttpServletRequest request) {
-        ApiError apiError = new ApiError(
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                e, request.getRequestURI()
-        );
-        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(StorageException.class)
-    protected ResponseEntity<?> handleStorageException(StorageException e,
-                                                       HttpServletRequest request) {
-        ApiError apiError = new ApiError(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                e, request.getRequestURI()
-        );
-        return new ResponseEntity<>(apiError, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     private FileResponse buildFileResponse(Path file) {

@@ -1,4 +1,5 @@
 root/
+database/
 .env.local
 
 HELP.md

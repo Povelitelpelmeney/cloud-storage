@@ -1,12 +1,12 @@
 package com.example.cloudstorage.jwt;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.*;
@@ -25,30 +25,37 @@ public class JwtUtils {
     @Value("${cloud-storage.app.jwt-expiration-ms}")
     private int jwtExpirationMs;
 
-    public String generateJwtToken(Authentication authentication) {
+    private SecretKey secretKey() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(this.jwtSecret));
+    }
 
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
+    public String generateJwtToken(UserDetailsImpl userPrincipal) {
+        return generateTokenFromUsername(userPrincipal.getUsername());
+    }
 
+    public String generateTokenFromUsername(String username) {
         return Jwts.builder()
-                .setSubject((userPrincipal.getUsername()))
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key(), SignatureAlgorithm.HS256)
+                .signWith(this.secretKey())
+                .claims()
+                .subject(username)
+                .issuedAt(new Date())
+                .expiration(new Date(new Date().getTime() + this.jwtExpirationMs))
+                .and()
                 .compact();
     }
 
-    private Key key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
-    }
-
-    public String getUserNameFromJwtToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(key()).build()
-                .parseClaimsJws(token).getBody().getSubject();
+    public String getUsernameFromJwtToken(String token) {
+        return Jwts.parser()
+                .verifyWith(this.secretKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
     }
 
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parserBuilder().setSigningKey(key()).build().parse(authToken);
+            Jwts.parser().verifyWith(this.secretKey()).build().parseSignedClaims(authToken);
             return true;
         } catch (MalformedJwtException e) {
             logger.error("Invalid JWT token: {}", e.getMessage());

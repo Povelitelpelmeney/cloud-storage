@@ -9,10 +9,7 @@ import lombok.Getter;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginRequest {
+public class RefreshTokenRequest {
     @NotBlank
-    private String username;
-
-    @NotBlank
-    private String password;
+    private String token;
 }

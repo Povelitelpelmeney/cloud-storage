@@ -16,10 +16,9 @@ public class CloudStorageApplication {
         SpringApplication.run(CloudStorageApplication.class, args);
     }
 
+    @SuppressWarnings("unused")
     @Bean
-    CommandLineRunner init(StorageService storageService) {
-        return (args) -> {
-            storageService.init();
-        };
+    public CommandLineRunner init(StorageService storageService) {
+        return (args) -> storageService.init();
     }
 }

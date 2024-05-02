@@ -1,14 +1,15 @@
-package com.example.cloudstorage.payload.response;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Getter;
+package com.example.cloudstorage.models;
 
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 
+import lombok.Getter;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 @Getter
-public class ApiError {
+public class APIError {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private final Date timestamp;
     private final int status;
@@ -17,7 +18,7 @@ public class ApiError {
     private final String message;
     private final String path;
 
-    public ApiError(int status, String error, Throwable e, String path) {
+    public APIError(int status, String error, Throwable e, String path) {
         this.timestamp = Date.from(Instant.now());
         this.status = status;
         this.error = error;

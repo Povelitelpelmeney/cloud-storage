@@ -1,6 +1,6 @@
 package com.example.cloudstorage.services;
 
-import org.springframework.core.io.Resource;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
@@ -13,7 +13,7 @@ public interface StorageService {
 
     List<Path> loadDirectory(Path path);
 
-    Resource loadAsResource(Path path);
+    ByteArrayResource loadAsResource(Path path);
 
     Path uploadFile(Path path, MultipartFile file);
 
