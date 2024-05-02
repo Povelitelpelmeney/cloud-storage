@@ -99,13 +99,12 @@ public class FileSystemStorageService implements StorageService {
 
     @Override
     public Path createDirectory(Path path, String name) {
-        name = name.replaceAll(".*?\\.+$", "");
         Path parent = this.load(path);
         if (!Files.isDirectory(parent))
             throw new StorageInvalidRequestException("Unable to create a directory inside of a regular file");
 
         try {
-            Path destination = parent.resolve(name);
+            Path destination = parent.resolve(name.replaceAll("\\.+$", ""));
             Files.createDirectory(destination);
             return destination;
         } catch (IOException e) {
@@ -134,10 +133,9 @@ public class FileSystemStorageService implements StorageService {
     public Path rename(Path path, String newName) {
         Path file = this.load(path);
         Path parent = file.getParent();
-        newName = newName.replaceAll(".*?\\.+$", "");
 
         try {
-            Path newFile = parent.resolve(newName);
+            Path newFile = parent.resolve(newName.replaceAll("\\.+$", ""));
             Files.move(file, newFile);
             return newFile;
         } catch (IOException e) {
