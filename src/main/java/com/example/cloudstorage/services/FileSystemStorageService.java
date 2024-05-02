@@ -106,7 +106,6 @@ public class FileSystemStorageService implements StorageService {
 
         try {
             Path destination = parent.resolve(name);
-            System.out.println(destination);
             Files.createDirectory(destination);
             return destination;
         } catch (IOException e) {

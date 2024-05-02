@@ -1,7 +1,9 @@
 package com.example.cloudstorage.controllers;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import com.example.cloudstorage.exceptions.storage.StorageFileNotFoundException;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +72,12 @@ public class AuthController {
                 userDetails.getEmail()
         );
 
+        try {
+            this.storageService.load(Paths.get(userDetails.getUsername()));
+        } catch (StorageFileNotFoundException ex) {
+            this.storageService.createDirectory(Paths.get(""), userDetails.getUsername());
+        }
+
         return ResponseEntity.ok(response);
     }
 
@@ -88,7 +96,6 @@ public class AuthController {
         );
 
         this.userRepository.save(user);
-        this.storageService.createDirectory(Paths.get(""), user.getUsername());
 
         return ResponseEntity.ok().build();
     }
