@@ -36,7 +36,7 @@ public class FileController {
     @GetMapping("/file/{*path}")
     @ResponseBody
     public ResponseEntity<FileResponse> load(@AuthenticationPrincipal UserDetailsImpl user,
-                                             @PathVariable String path) throws IOException {
+                                             @PathVariable String path) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
 
