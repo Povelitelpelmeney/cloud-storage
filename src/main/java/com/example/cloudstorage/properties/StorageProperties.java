@@ -1,12 +1,11 @@
 package com.example.cloudstorage.properties;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import lombok.Getter;
+
 @Getter
-@Setter
 @ConfigurationProperties("storage")
 public class StorageProperties {
-    private String location = "upload-dir";
+    private final String location = "root";
 }
