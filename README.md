@@ -1,2 +1,2 @@
 # cloud-storage
-### Cloud-based storage service REST API using Spring Boot
+### Cloud-based storage service using Spring Boot + React
