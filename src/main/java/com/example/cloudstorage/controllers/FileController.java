@@ -10,14 +10,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.example.cloudstorage.services.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,14 +35,12 @@ public class FileController {
 
     @GetMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> load(@PathVariable String path) throws IOException {
+    public ResponseEntity<FileResponse> load(@AuthenticationPrincipal UserDetailsImpl user,
+                                             @PathVariable String path) throws IOException {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
 
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        Path file = this.storageService.load(Paths.get(username, path));
+        Path file = this.storageService.load(Paths.get(user.getUsername(), path));
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
@@ -50,11 +48,9 @@ public class FileController {
 
     @GetMapping("/files/{*path}")
     @ResponseBody
-    public ResponseEntity<List<FileResponse>> loadAll(@PathVariable(required = false) String path) {
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        List<Path> directory = this.storageService.loadDirectory(Paths.get(username, path));
+    public ResponseEntity<List<FileResponse>> loadAll(@AuthenticationPrincipal UserDetailsImpl user,
+                                                      @PathVariable(required = false) String path) {
+        List<Path> directory = this.storageService.loadDirectory(Paths.get(user.getUsername(), path));
         List<FileResponse> responses = directory.stream()
                 .map(this::buildFileResponse)
                 .sorted(Comparator.comparing(FileResponse::getLastModified))
@@ -66,14 +62,12 @@ public class FileController {
 
     @GetMapping("/load/{*path}")
     @ResponseBody
-    public ResponseEntity<Resource> downloadFile(@PathVariable String path) {
+    public ResponseEntity<Resource> downloadFile(@AuthenticationPrincipal UserDetailsImpl user,
+                                                 @PathVariable String path) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
 
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        ByteArrayResource file = this.storageService.loadAsResource(Paths.get(username, path));
+        ByteArrayResource file = this.storageService.loadAsResource(Paths.get(user.getUsername(), path));
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"");
@@ -90,12 +84,10 @@ public class FileController {
 
     @PostMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> uploadFile(@PathVariable(required = false) String path,
+    public ResponseEntity<FileResponse> uploadFile(@AuthenticationPrincipal UserDetailsImpl user,
+                                                   @PathVariable(required = false) String path,
                                                    @RequestParam("file") MultipartFile multipartFile) {
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        Path file = this.storageService.uploadFile(Paths.get(username, path), multipartFile);
+        Path file = this.storageService.uploadFile(Paths.get(user.getUsername(), path), multipartFile);
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
@@ -103,14 +95,12 @@ public class FileController {
 
     @PostMapping("/files/{*path}")
     @ResponseBody
-    public ResponseEntity<List<FileResponse>> uploadFiles(@PathVariable(required = false) String path,
+    public ResponseEntity<List<FileResponse>> uploadFiles(@AuthenticationPrincipal UserDetailsImpl user,
+                                                          @PathVariable(required = false) String path,
                                                           @RequestParam("files") MultipartFile[] multipartFiles) {
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
         List<FileResponse> responses = Arrays.stream(multipartFiles)
                 .map(multipartFile -> this.storageService
-                        .uploadFile(Paths.get(username, path), multipartFile))
+                        .uploadFile(Paths.get(user.getUsername(), path), multipartFile))
                 .map(this::buildFileResponse)
                 .sorted(Comparator.comparing(FileResponse::getLastModified))
                 .sorted(Comparator.comparing(FileResponse::getType))
@@ -121,12 +111,10 @@ public class FileController {
 
     @PostMapping("/dir/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> createDirectory(@PathVariable(required = false) String path,
+    public ResponseEntity<FileResponse> createDirectory(@AuthenticationPrincipal UserDetailsImpl user,
+                                                        @PathVariable(required = false) String path,
                                                         @RequestParam("name") String name) {
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        Path directory = this.storageService.createDirectory(Paths.get(username, path), name);
+        Path directory = this.storageService.createDirectory(Paths.get(user.getUsername(), path), name);
         FileResponse response = this.buildFileResponse(directory);
 
         return ResponseEntity.ok(response);
@@ -134,15 +122,13 @@ public class FileController {
 
     @PutMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> move(@PathVariable String path,
+    public ResponseEntity<FileResponse> move(@AuthenticationPrincipal UserDetailsImpl user,
+                                             @PathVariable String path,
                                              @RequestParam("target") String name) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to move a root folder");
 
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        Path file = this.storageService.move(Paths.get(username, path), name);
+        Path file = this.storageService.move(Paths.get(user.getUsername(), path), name);
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
@@ -150,29 +136,25 @@ public class FileController {
 
     @PatchMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> rename(@PathVariable String path,
+    public ResponseEntity<FileResponse> rename(@AuthenticationPrincipal UserDetailsImpl user,
+                                               @PathVariable String path,
                                                @RequestParam("name") String name) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to rename a root folder");
 
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        Path file = this.storageService.rename(Paths.get(username, path), name);
+        Path file = this.storageService.rename(Paths.get(user.getUsername(), path), name);
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/file/{*path}")
-    public ResponseEntity<?> delete(@PathVariable String path) {
+    public ResponseEntity<?> delete(@AuthenticationPrincipal UserDetailsImpl user,
+                                    @PathVariable String path) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to delete a root folder");
 
-        UserDetails user = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String username = user.getUsername();
-
-        this.storageService.delete(Paths.get(username, path));
+        this.storageService.delete(Paths.get(user.getUsername(), path));
 
         return ResponseEntity.ok().build();
     }
