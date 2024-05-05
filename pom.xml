@@ -15,10 +15,6 @@
     <description>Cloud-based storage service</description>
     <properties>
         <java.version>21</java.version>
-        <frontend-src-dir>${project.basedir}/src/main/frontend</frontend-src-dir>
-        <node.version>v20.10.0</node.version>
-        <npm.version>10.2.3</npm.version>
-        <frontend-maven-plugin.version>1.15.0</frontend-maven-plugin.version>
         <jjwt.version>0.12.5</jjwt.version>
     </properties>
     <dependencies>
