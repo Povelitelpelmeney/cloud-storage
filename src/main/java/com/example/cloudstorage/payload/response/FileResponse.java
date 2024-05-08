@@ -6,6 +6,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class FileResponse {
+    private Long id;
     private String name;
     private String type;
     private Long lastModified;
