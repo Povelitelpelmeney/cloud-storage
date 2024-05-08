@@ -1,0 +1,67 @@
+$wallpaper: "./assets/images/wallpaper.jpg";
+
+@mixin hover {
+  opacity: 0.5;
+}
+
+@mixin nav-link {
+  cursor: pointer;
+  transition: opacity 300ms ease;
+  color: black;
+  margin: 8px;
+
+  &:hover {
+    @include hover;
+  }
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+
+  .logo {
+    font-weight: 500;
+    font-size: 30px;
+    margin: 10px;
+
+    .nav-link {
+      @include nav-link;
+    }
+  }
+
+  .auth {
+    display: flex;
+    vertical-align: center;
+    margin: 10px;
+    font-size: 20px;
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .nav-link {
+        @include nav-link;
+      }
+    }
+  }
+}
+
+main {
+  display: flex;
+  min-height: 80vh;
+  justify-content: center;
+
+  background-image: url($wallpaper);
+  background-repeat: no-repeat;
+  background-position: 0, 0;
+  background-size: cover;
+}
+
+footer {
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  margin-top: 10px;
+}
