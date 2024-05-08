@@ -15,27 +15,18 @@ const Storage = () => {
   const upload_input = useRef(null);
   const navigate = useNavigate();
 
-  const handleErrorWrapper = () => {
-    let alerted = false;
-
-    const handleError = (error: AxiosError<APIError>) => {
+  const handleError = useCallback(
+    (error: AxiosError<APIError>) => {
       if (error.response?.status === 403) {
-        if (!alerted) {
-          eventBus.dispatch("logout");
-          navigate("/login");
-          window.location.reload();
-          window.alert(
-            "Your session has expired. Please make a new login request"
-          );
-          alerted = true;
-        }
+        eventBus.dispatch("logout");
+        navigate("/login");
+        window.alert(
+          "Your session has expired. Please make a new login request"
+        );
       } else console.error(error.response?.data?.message);
-    };
-
-    return handleError;
-  };
-
-  const handleError = handleErrorWrapper();
+    },
+    [navigate]
+  );
 
   const selectFile = (file: FileType) => {
     setSelectedFiles((prevSelectedFiles) => [...prevSelectedFiles, file]);

@@ -55,7 +55,6 @@ const Signup = () => {
       await AuthService.signup(values);
       setLoading(false);
       navigate("/login");
-      window.location.reload();
     },
     [navigate]
   );
