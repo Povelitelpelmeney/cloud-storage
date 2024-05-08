@@ -41,7 +41,7 @@ public class UserAdvice {
 
     @ExceptionHandler(UserException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    protected APIError handleRefreshToken(UserException ex,
+    protected APIError handleUser(UserException ex,
                                           HttpServletRequest request) {
         return new APIError(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

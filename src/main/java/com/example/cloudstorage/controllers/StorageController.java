@@ -29,14 +29,14 @@ import com.example.cloudstorage.exceptions.storage.StorageInvalidRequestExceptio
 @SuppressWarnings("unused")
 @RestController
 @RequestMapping("/api/storage")
-public class FileController {
+public class StorageController {
     @Autowired
     private StorageService storageService;
 
     @GetMapping("/file/{*path}")
     @ResponseBody
     public ResponseEntity<FileResponse> load(@AuthenticationPrincipal UserDetailsImpl user,
-                                             @PathVariable String path) throws IOException {
+                                             @PathVariable String path) {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
 
@@ -163,6 +163,7 @@ public class FileController {
         try {
             BasicFileAttributes fileAttributes = Files.readAttributes(file, BasicFileAttributes.class);
             return new FileResponse(
+                    fileAttributes.creationTime().toMillis(),
                     file.getFileName().toString(),
                     fileAttributes.isDirectory() ? "directory" : "file",
                     fileAttributes.lastModifiedTime().toMillis(),

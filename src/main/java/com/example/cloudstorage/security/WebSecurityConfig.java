@@ -20,15 +20,15 @@ import com.example.cloudstorage.jwt.AuthEntryPointJwt;
 import com.example.cloudstorage.jwt.AuthTokenFilter;
 import com.example.cloudstorage.services.UserDetailsServiceImpl;
 
+@SuppressWarnings("unused")
 @Configuration
 @EnableMethodSecurity
-@SuppressWarnings("unused")
 public class WebSecurityConfig {
     @Autowired
-    UserDetailsServiceImpl userDetailsService;
+    private UserDetailsServiceImpl userDetailsService;
 
     @Autowired
-    AuthEntryPointJwt unauthorizedHandler;
+    private AuthEntryPointJwt unauthorizedHandler;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {

@@ -1,6 +1,5 @@
 package com.example.cloudstorage.controllers;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.example.cloudstorage.exceptions.storage.StorageFileNotFoundException;
