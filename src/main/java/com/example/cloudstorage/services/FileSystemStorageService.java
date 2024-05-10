@@ -116,7 +116,7 @@ public class FileSystemStorageService implements StorageService {
     public Path move(Path path, String newDirectory) {
         Path file = this.load(path);
         Path parent = file.getParent();
-        Path target = newDirectory.equals(".") ? parent.getParent() : parent.resolve(newDirectory);
+        Path target = newDirectory.equals("...") ? parent.getParent() : parent.resolve(newDirectory);
         if (!Files.exists(target) || !Files.isDirectory(target) || target.equals(this.root))
             throw new StorageInvalidRequestException("Invalid target folder");
 
