@@ -40,3 +40,5 @@ type APIError = {
   message: string;
   path: string;
 };
+
+type TypeDiff<T, U> = Pick<T, Exclude<keyof T, keyof U>>;

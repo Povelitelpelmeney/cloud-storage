@@ -19,25 +19,18 @@
     border-bottom: 3px solid black;
 
     .icon-wrapper {
-      cursor: pointer;
       position: relative;
-      transition: 0.2s all;
       top: -2px;
       left: 5px;
-
-      .icon:active {
-        transform: scale(0.98);
-      }
 
       .icon-tooltip {
         position: absolute;
         z-index: 1;
         top: -35px;
         left: -15px;
-        transition-property: visibility;
-        transition-delay: 0s;
-
+        transition: visibility 150ms 0s ease, opacity 150ms 0s ease;
         visibility: hidden;
+        opacity: 0;
         text-align: center;
         white-space: nowrap;
         background-color: #f7f7f7;
@@ -46,9 +39,24 @@
         border-radius: 10px;
       }
 
-      &:hover .icon-tooltip {
-        visibility: visible;
-        transition-delay: 0.3s;
+      .icon {
+        cursor: pointer;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+
+        &:hover {
+          opacity: 0.75;
+
+          ~ .icon-tooltip {
+            visibility: visible;
+            opacity: 1;
+            transition-duration: 0s;
+            transition-delay: 0.3s;
+          }
+        }
+
+        &:active {
+          transform: scale(0.9);
+        }
       }
     }
   }
