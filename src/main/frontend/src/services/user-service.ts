@@ -19,8 +19,11 @@ const getFiles = async (path: string[]): Promise<FileType[]> => {
 // };
 
 const createDirectory = async (path: string[], directoryName: string) => {
-  const URI = `${baseURI}/dir/${path.join("/")}?name=${directoryName}`;
-  const response = await api.post(URI);
+  const URI =
+    path.length > 0
+      ? `${baseURI}/dir/${path.join("/")}?name=${directoryName}`
+      : `${baseURI}/dir?name=${directoryName}`;
+  const response = await api.post<FileType>(URI);
   return response.data;
 };
 

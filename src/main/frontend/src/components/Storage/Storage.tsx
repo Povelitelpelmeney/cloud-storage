@@ -7,18 +7,20 @@ import { RxCross2 } from "react-icons/rx";
 import eventBus from "../../common/eventBus";
 import UserService from "../../services/user-service";
 import FileComponent from "../FileComponent/FileComponent";
-import "./Storage.scss";
-import useContextMenu from "../../hooks/useContextMenu";
 import FileContexMenu from "../FileContexMenu/FileContexMenu";
+import ModalWindow from "../ModalWindow/ModalWindow";
+import useContextMenu from "../../hooks/useContextMenu";
+import useModalWindow from "../../hooks/useModalWindow";
+import "./Storage.scss";
 
 const Storage = () => {
   const [path, setPath] = useState<string[]>([]);
   const [files, setFiles] = useState<FileType[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
-  const upload_input = useRef(null);
+  const uploadInput = useRef(null);
   const navigate = useNavigate();
-  const { filename, setFilename, clicked, setClicked, point, setPoint } =
-    useContextMenu();
+  const { state: contextState, service: contextService } = useContextMenu();
+  const { state: modalState, service: modalService } = useModalWindow();
 
   const selectFile = (fileId: number) => {
     const index = selectedFiles.indexOf(fileId);
@@ -30,14 +32,14 @@ const Storage = () => {
     setSelectedFiles([]);
   };
 
-  const invokeContexMenu = (
+  const openContexMenu = (
     e: React.MouseEvent<HTMLDivElement>,
     filename: string
   ) => {
     e.preventDefault();
-    setClicked(true);
-    setFilename(filename);
-    setPoint({ x: e.pageX, y: e.pageY });
+    contextService.setActiveState(true);
+    contextService.setFilename(filename);
+    contextService.setPoint({ x: e.pageX, y: e.pageY });
   };
 
   const handleError = useCallback(
@@ -48,7 +50,7 @@ const Storage = () => {
         window.alert(
           "Your session has expired. Please make a new login request"
         );
-      } else console.error(error.response?.data?.message, error);
+      } else return error.response?.data?.message;
     },
     [navigate]
   );
@@ -71,6 +73,19 @@ const Storage = () => {
     setFiles(files);
   }, [path]);
 
+  const createDirectory = async (directoryName: string) => {
+    const response = await UserService.createDirectory(path, directoryName);
+    setFiles((prevFiles) => [response, ...prevFiles]);
+  };
+
+  const createDirectoryWrapper = () => {
+    modalService.makeDirectory("Create directory", async (name: string) => {
+      const response = await createDirectory(name).catch(handleError);
+      if (response) return response;
+      else modalService.closeModal();
+    });
+  };
+
   const deleteFile = async (filename: string) => {
     await UserService.deleteFile(path, filename);
     setFiles((prevFiles) => prevFiles.filter((file) => file.name !== filename));
@@ -89,17 +104,23 @@ const Storage = () => {
 
   return (
     <div className="storage">
-      <input className="upload-input" ref={upload_input} type="file" multiple />
+      <input className="upload-input" ref={uploadInput} type="file" multiple />
 
       <div className="menu-bar">
         {selectedFiles.length === 0 ? (
           <IconContext.Provider value={{ className: "icon", size: "40" }}>
             <div className="icon-wrapper">
-              <FiUpload onClick={console.log} />
+              <FiUpload
+                onClick={() =>
+                  modalService.overwriteFiles("Test message", () => {
+                    console.log("hi");
+                  })
+                }
+              />
               <span className="icon-tooltip">Upload files</span>
             </div>
             <div className="icon-wrapper">
-              <FiFolderPlus />
+              <FiFolderPlus onClick={createDirectoryWrapper} />
               <span className="icon-tooltip">Create directory</span>
             </div>
           </IconContext.Provider>
@@ -146,18 +167,22 @@ const Storage = () => {
             {...(file.type === "directory" && {
               goto: () => gotoDirectory(file.name),
             })}
-            onContexMenu={(e) => invokeContexMenu(e, file.name)}
+            onContexMenu={(e) => openContexMenu(e, file.name)}
           />
         ))}
       </div>
 
-      {clicked && (
+      {contextState.active && (
         <FileContexMenu
-          filename={filename}
+          filename={contextState.filename}
           delete={deleteFile}
-          top={point.y}
-          left={point.x}
+          top={contextState.point.y}
+          left={contextState.point.x}
         />
+      )}
+
+      {modalState.type !== "hidden" && (
+        <ModalWindow state={modalState} onClose={modalService.closeModal} />
       )}
     </div>
   );
