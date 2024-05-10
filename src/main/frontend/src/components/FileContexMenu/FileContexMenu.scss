@@ -1,0 +1,27 @@
+.context-menu {
+  position: fixed;
+  width: auto;
+  height: auto;
+  background-color: rgb(240, 242, 252);
+  border: 2px solid black;
+  border-radius: 15px;
+
+  .context-menu-item {
+    list-style: none;
+    transition: background-color 0.3s ease;
+    padding: 5px 15px 5px 15px;
+    width: 100%;
+
+    &.first-item {
+      border-radius: 15px 15px 0 0;
+    }
+
+    &.last-item {
+      border-radius: 0 0 15px 15px;
+    }
+
+    &:hover {
+      background-color: rgb(202, 239, 226);
+    }
+  }
+}

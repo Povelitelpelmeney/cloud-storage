@@ -9,6 +9,7 @@ type FileComponentProps = {
   selected?: boolean;
   select?: () => void;
   goto?: () => void;
+  onContexMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
 } & FileType;
 
 const FileComponent = (props: FileComponentProps) => {
@@ -38,11 +39,6 @@ const FileComponent = (props: FileComponentProps) => {
       : "Too much";
   }, []);
 
-  const test = (e: MouseEvent) => {
-    e.preventDefault();
-    console.log("hi");
-  };
-
   useEffect(() => {
     setLastModified(props.name === "..." ? "" : parseDate(props.lastModified));
     setSize(props.type === "directory" ? "" : parseSize(props.size));
@@ -53,6 +49,7 @@ const FileComponent = (props: FileComponentProps) => {
       className={`file ${props.selected ? "selected" : ""}`}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
+      {...(props.onContexMenu && { onContextMenu: props.onContexMenu })}
     >
       <IconContext.Provider value={{ className: "file-icon", size: "40" }}>
         {props.type === "directory" ? <FcFolder /> : <FcFile />}

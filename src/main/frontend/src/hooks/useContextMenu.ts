@@ -7,6 +7,7 @@ type Point = {
 };
 
 const useContextMenu = () => {
+  const [filename, setFilename] = useState<string>("");
   const [clicked, setClicked] = useState<boolean>(false);
   const [point, setPoint] = useState<Point>({ x: 0, y: 0 });
 
@@ -18,7 +19,7 @@ const useContextMenu = () => {
     };
   }, []);
 
-  return { clicked, setClicked, point, setPoint };
+  return { filename, setFilename, clicked, setClicked, point, setPoint };
 };
 
 export default useContextMenu;

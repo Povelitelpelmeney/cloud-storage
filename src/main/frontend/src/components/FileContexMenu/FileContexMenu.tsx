@@ -1,32 +1,28 @@
+import "./FileContexMenu.scss";
+
 type FileContexMenuProps = {
   filename: string;
-  upload: (filename: string) => void;
-  rename: (filename: string) => void;
+  top: number;
+  left: number;
   delete: (filename: string) => void;
 };
 
 const FileContexMenu = (props: FileContexMenuProps) => {
   return (
-    <ul className="context-menu">
-      <li
-        className="context-menu-item"
-        onClick={() => props.upload(props.filename)}
-      >
-        Upload
-      </li>
-      <li
-        className="context-menu-item"
-        onClick={() => props.rename(props.filename)}
-      >
+    <div className="context-menu" style={{ top: props.top, left: props.left }}>
+      <div className="context-menu-item first-item" onClick={() => console.log("download")}>
+        Download
+      </div>
+      <div className="context-menu-item" onClick={() => console.log("rename")}>
         Rename
-      </li>
-      <li
-        className="context-menu-item"
-        onClick={() => props.rename(props.filename)}
+      </div>
+      <div
+        className="context-menu-item last-item"
+        onClick={() => props.delete(props.filename)}
       >
         Delete
-      </li>
-    </ul>
+      </div>
+    </div>
   );
 };
 

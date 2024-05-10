@@ -7,9 +7,9 @@ import { RxCross2 } from "react-icons/rx";
 import eventBus from "../../common/eventBus";
 import UserService from "../../services/user-service";
 import FileComponent from "../FileComponent/FileComponent";
-import FileContexMenu from "../FileContexMenu/FileContexMenu";
-import useContextMenu from "../../hooks/useContextMenu";
 import "./Storage.scss";
+import useContextMenu from "../../hooks/useContextMenu";
+import FileContexMenu from "../FileContexMenu/FileContexMenu";
 
 const Storage = () => {
   const [path, setPath] = useState<string[]>([]);
@@ -17,7 +17,8 @@ const Storage = () => {
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
   const upload_input = useRef(null);
   const navigate = useNavigate();
-  // const { clicked, setClicked, point, setPoint } = useContextMenu();
+  const { filename, setFilename, clicked, setClicked, point, setPoint } =
+    useContextMenu();
 
   const selectFile = (fileId: number) => {
     const index = selectedFiles.indexOf(fileId);
@@ -27,6 +28,16 @@ const Storage = () => {
 
   const cancelSelection = () => {
     setSelectedFiles([]);
+  };
+
+  const invokeContexMenu = (
+    e: React.MouseEvent<HTMLDivElement>,
+    filename: string
+  ) => {
+    e.preventDefault();
+    setClicked(true);
+    setFilename(filename);
+    setPoint({ x: e.pageX, y: e.pageY });
   };
 
   const handleError = useCallback(
@@ -135,9 +146,19 @@ const Storage = () => {
             {...(file.type === "directory" && {
               goto: () => gotoDirectory(file.name),
             })}
+            onContexMenu={(e) => invokeContexMenu(e, file.name)}
           />
         ))}
       </div>
+
+      {clicked && (
+        <FileContexMenu
+          filename={filename}
+          delete={deleteFile}
+          top={point.y}
+          left={point.x}
+        />
+      )}
     </div>
   );
 };
