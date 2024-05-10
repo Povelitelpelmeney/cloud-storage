@@ -7,8 +7,15 @@ import { RxCross2 } from "react-icons/rx";
 import eventBus from "../../common/eventBus";
 import UserService from "../../services/user-service";
 import FileComponent from "../FileComponent/FileComponent";
+<<<<<<< Updated upstream
 import FileContexMenu from "../FileContexMenu/FileContexMenu";
 import useContextMenu from "../../hooks/useContextMenu";
+=======
+import ModalWindow from "../ModalWindow/ModalWindow";
+import FileContexMenu from "../FileContexMenu/FileContexMenu";
+import useContextMenu from "../../hooks/useContextMenu";
+import useModal from "../../hooks/useModal";
+>>>>>>> Stashed changes
 import "./Storage.scss";
 
 const Storage = () => {
@@ -17,6 +24,11 @@ const Storage = () => {
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
   const upload_input = useRef(null);
   const navigate = useNavigate();
+<<<<<<< Updated upstream
+=======
+  // ==========
+  const { isShowing, toggle } = useModal();
+>>>>>>> Stashed changes
   // const { clicked, setClicked, point, setPoint } = useContextMenu();
 
   const selectFile = (fileId: number) => {
@@ -84,7 +96,12 @@ const Storage = () => {
         {selectedFiles.length === 0 ? (
           <IconContext.Provider value={{ className: "icon", size: "40" }}>
             <div className="icon-wrapper">
-              <FiUpload onClick={console.log} />
+              <FiUpload onClick={() => toggle()} />
+              <ModalWindow
+                active={isShowing}
+                setActive={toggle}
+                type=""
+              ></ModalWindow>
               <span className="icon-tooltip">Upload files</span>
             </div>
             <div className="icon-wrapper">

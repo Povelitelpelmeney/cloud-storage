@@ -1,0 +1,58 @@
+@mixin hover {
+  opacity: 0.5;
+}
+
+@mixin nav-link {
+  cursor: pointer;
+  transition: opacity 300ms ease;
+  color: black;
+  margin: 8px;
+
+  &:hover {
+    @include hover;
+  }
+}
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  visibility: hidden;
+  z-index: 1;
+  &.active {
+    visibility: visible;
+  }
+}
+.modal-window {
+  height: 200px;
+  width: 400px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  border-radius: 20px;
+  transform: translate(-50%, -50%);
+  visibility: hidden;
+  background-color: aliceblue;
+  z-index: 2;
+  &.active {
+    visibility: visible;
+  }
+}
+
+.modal-content {
+  border-radius: 20px;
+  height: 200px;
+  width: 400px;
+}
+.close-modal-button {
+  position: absolute;
+  top: -3%;
+  right: 5%;
+  font-size: 2.5rem;
+  color: #444;
+  border: none;
+  background: none;
+}
