@@ -7,15 +7,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
+
+import org.zeroturnaround.zip.ZipException;
+import org.zeroturnaround.zip.ZipUtil;
 
 import com.example.cloudstorage.exceptions.storage.StorageException;
 import com.example.cloudstorage.exceptions.storage.StorageFileNotFoundException;
@@ -66,13 +72,24 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
-    public ByteArrayResource loadAsResource(Path path) {
+    public Resource loadAsResource(Path path) {
         Path file = this.load(path);
-        if (Files.isDirectory(file))
-            throw new StorageInvalidRequestException("Cannot load a directory as a resource");
+        UUID uuid = UUID.randomUUID();
 
         try {
-            return new ByteArrayResource(Files.readAllBytes(file));
+            if (Files.isDirectory(file)) {
+                Path zipPath = file.getParent().resolve(uuid + ".zip");
+                try {
+                    ZipUtil.pack(file.toFile(), zipPath.toFile());
+                } catch (ZipException ignored) {
+                }
+                return new ByteArrayResource(Files.readAllBytes(zipPath)) {
+                    @Override
+                    public String getFilename() {
+                        return zipPath.getFileName().toString();
+                    }
+                };
+            } else return new UrlResource(file.toUri());
         } catch (IOException e) {
             throw new StorageException("Could not read a file");
         }

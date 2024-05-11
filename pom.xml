@@ -21,6 +21,8 @@
         <frontend-maven-plugin.version>1.15.0</frontend-maven-plugin.version>
         <jjwt.version>0.12.5</jjwt.version>
         <jetbrains-annotations.version>24.1.0</jetbrains-annotations.version>
+        <apache-tika.version>2.9.2</apache-tika.version>
+        <zt-zip.version>1.17</zt-zip.version>
     </properties>
     <dependencies>
         <dependency>
@@ -90,6 +92,17 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>${apache-tika.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.zeroturnaround</groupId>
+            <artifactId>zt-zip</artifactId>
+            <version>${zt-zip.version}</version>
+            <type>jar</type>
         </dependency>
     </dependencies>
 
