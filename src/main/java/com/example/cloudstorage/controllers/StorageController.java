@@ -9,6 +9,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,7 +174,7 @@ public class StorageController {
         try {
             BasicFileAttributes fileAttributes = Files.readAttributes(file, BasicFileAttributes.class);
             return new FileResponse(
-                    fileAttributes.creationTime().toMillis(),
+                    UUID.randomUUID(),
                     file.getFileName().toString(),
                     fileAttributes.isDirectory() ? "directory" : "file",
                     fileAttributes.lastModifiedTime().toMillis(),
