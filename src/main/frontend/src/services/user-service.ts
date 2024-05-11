@@ -14,9 +14,10 @@ const getFiles = async (path: string[]): Promise<FileType[]> => {
   return response.data;
 };
 
-// const downloadFile = async (path: string[], filename: string) => {
-//   await api.get(`/api/storage/load/${path.join("/")}/${filename}`);
-// };
+const downloadFile = async (path: string[], filename: string) => {
+  const URI = `${baseURI}/load/${[...path, filename].join("/")}`;
+  return await api.get<Blob>(URI, { responseType: "blob" });
+};
 
 const createDirectory = async (path: string[], directoryName: string) => {
   const URI =
@@ -35,6 +36,7 @@ const deleteFile = async (path: string[], filename: string) => {
 const UserService = {
   getFile,
   getFiles,
+  downloadFile,
   createDirectory,
   deleteFile,
 };

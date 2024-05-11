@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
-import { AxiosError } from "axios";
 import { IconContext } from "react-icons";
 import { FiUpload, FiFolderPlus, FiDownload, FiTrash2 } from "react-icons/fi";
 import { RxCross2 } from "react-icons/rx";
-import eventBus from "../../common/eventBus";
 import UserService from "../../services/user-service";
 import FileComponent from "../FileComponent/FileComponent";
 import FileContexMenu from "../FileContexMenu/FileContexMenu";
@@ -18,9 +15,8 @@ const Storage = () => {
   const [files, setFiles] = useState<FileType[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
   const uploadInput = useRef(null);
-  const navigate = useNavigate();
   const { state: contextState, service: contextService } = useContextMenu();
-  const { state: modalState, service: modalService } = useModalWindow();
+  // const { state: modalState, service: modalService } = useModalWindow();
 
   const selectFile = (fileId: number) => {
     const index = selectedFiles.indexOf(fileId);
@@ -42,19 +38,6 @@ const Storage = () => {
     contextService.setPoint({ x: e.pageX, y: e.pageY });
   };
 
-  const handleError = useCallback(
-    (error: AxiosError<APIError>) => {
-      if (error.response?.status === 403) {
-        eventBus.dispatch("logout");
-        navigate("/login");
-        window.alert(
-          "Your session has expired. Please make a new login request"
-        );
-      } else return error.response?.data?.message;
-    },
-    [navigate]
-  );
-
   const gotoDirectory = (directoryName: string) => {
     setPath((path) => [...path, directoryName]);
   };
@@ -73,18 +56,38 @@ const Storage = () => {
     setFiles(files);
   }, [path]);
 
+  const downloadFile = async (filename: string) => {
+    const response = await UserService.downloadFile(path, filename);
+    let url = window.URL.createObjectURL(
+      new Blob([response.data], { type: response.headers["content-type"] })
+    );
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = decodeURIComponent(
+      response.headers["content-disposition"].split("''")[1]
+    );
+    a.click();
+  };
+
+  const downloadSelected = async () => {
+    const promises = selectedFiles
+      .map((id) => files.find((file) => file.id === id)!.name)
+      .map((filename) => downloadFile(filename));
+    await Promise.all(promises);
+  };
+
   const createDirectory = async (directoryName: string) => {
     const response = await UserService.createDirectory(path, directoryName);
     setFiles((prevFiles) => [response, ...prevFiles]);
   };
 
-  const createDirectoryWrapper = () => {
-    modalService.makeDirectory("Create directory", async (name: string) => {
-      const response = await createDirectory(name).catch(handleError);
-      if (response) return response;
-      else modalService.closeModal();
-    });
-  };
+  // const createDirectoryWrapper = () => {
+  //   modalService.makeDirectory("Create directory", async (name: string) => {
+  //     const response = await createDirectory(name).catch(handleError);
+  //     if (response) return response;
+  //     else modalService.closeModal();
+  //   });
+  // };
 
   const deleteFile = async (filename: string) => {
     await UserService.deleteFile(path, filename);
@@ -93,14 +96,14 @@ const Storage = () => {
 
   const deleteSelected = async () => {
     const promises = selectedFiles
-      .map((fileId) => files.find((file) => file.id === fileId)!.name)
+      .map((id) => files.find((file) => file.id === id)!.name)
       .map((filename) => deleteFile(filename));
     await Promise.all(promises);
   };
 
   useEffect(() => {
-    getFiles().catch(handleError);
-  }, [getFiles, handleError]);
+    getFiles();
+  }, [getFiles]);
 
   return (
     <div className="storage">
@@ -110,17 +113,11 @@ const Storage = () => {
         {selectedFiles.length === 0 ? (
           <IconContext.Provider value={{ className: "icon", size: "40" }}>
             <div className="icon-wrapper">
-              <FiUpload
-                onClick={() =>
-                  modalService.overwriteFiles("Test message", () => {
-                    console.log("hi");
-                  })
-                }
-              />
+              <FiUpload />
               <span className="icon-tooltip">Upload files</span>
             </div>
             <div className="icon-wrapper">
-              <FiFolderPlus onClick={createDirectoryWrapper} />
+              <FiFolderPlus />
               <span className="icon-tooltip">Create directory</span>
             </div>
           </IconContext.Provider>
@@ -131,7 +128,7 @@ const Storage = () => {
               <span className="icon-tooltip">Cancel selection</span>
             </div>
             <div className="icon-wrapper">
-              <FiDownload />
+              <FiDownload onClick={downloadSelected} />
               <span className="icon-tooltip">Download files</span>
             </div>
             <div className="icon-wrapper">
@@ -162,7 +159,7 @@ const Storage = () => {
             type={file.type}
             lastModified={file.lastModified}
             size={file.size}
-            selected={selectedFiles.some((fileId) => fileId === file.id)}
+            selected={selectedFiles.some((id) => id === file.id)}
             select={() => selectFile(file.id)}
             {...(file.type === "directory" && {
               goto: () => gotoDirectory(file.name),
@@ -175,15 +172,16 @@ const Storage = () => {
       {contextState.active && (
         <FileContexMenu
           filename={contextState.filename}
+          download={downloadFile}
           delete={deleteFile}
           top={contextState.point.y}
           left={contextState.point.x}
         />
       )}
 
-      {modalState.type !== "hidden" && (
-        <ModalWindow state={modalState} onClose={modalService.closeModal} />
-      )}
+      {/* {modalState.type !== "hidden" && (
+        <ModalWindow state={modalState} />
+      )} */}
     </div>
   );
 };

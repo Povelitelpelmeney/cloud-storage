@@ -1,9 +1,9 @@
+import { Modal } from "react-bootstrap";
 import { ModalStateType } from "../../hooks/useModalWindow";
 import "./ModalWindow.scss";
 
 type ModalWindowProps = {
   state: ModalStateType;
-  onClose: () => void;
 };
 
 const ModalWindow = (props: ModalWindowProps) => {
@@ -14,19 +14,14 @@ const ModalWindow = (props: ModalWindowProps) => {
   // }
 
   return (
-    <>
-      <div className="overlay"></div>
-      <div className="modal-window">
-        <button className="modal-button close" onClick={props.onClose}>
-          &times;
-        </button>
-        <div className="modal-message">{props.state.message}</div>
-        <button className="modal-button confirm" onClick={() => props.state.callback("кеша")}>
-          {props.state.action.charAt(0).toLocaleUpperCase() +
-            props.state.action.slice(1)}
-        </button>
-      </div>
-    </>
+    <Modal show={props.state.type !== "hidden"} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Title</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <h1>Hi</h1>
+      </Modal.Body>
+    </Modal>
   );
 };
 

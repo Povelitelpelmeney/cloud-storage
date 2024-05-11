@@ -1,89 +1,97 @@
 import { useReducer } from "react";
 
 type ModalStateType = {
+  show: boolean;
+  title: string;
+  message: string;
+  list?: string[];
+  input?: boolean;
+  selection?: boolean;
+  callback?: () => void;
+};
+
+type ModalActionType = {
   type: string;
-  action: string;
-  message: string;
-  error?: string;
-  directories?: string[];
-  callback?: (arg: FileType[] & FileType & string) => void;
+  payload: {
+    list?: string[];
+    input?: boolean;
+    selection?: boolean;
+    callback?: () => void;
+  };
 };
 
-type ConfirmationAction = {
-  type: "overwrite" | "delete";
-  message: string;
-  callback: (files: FileType[]) => void;
-};
-
-type InputAction = {
-  type: "rename" | "mkdir";
-  message: string;
-  callback: (filename: string, newFilename?: string) => void;
-};
-
-type SelectionAction = {
-  type: "move";
-  message: string;
-  list: string[];
-  callback: (file: FileType) => void;
-};
-
-type ErrorAction = {
-  type: "error";
-  message: string;
-};
-
-type CloseAction = {
-  type: "close";
-};
-
-type ModalActionType =
-  | ConfirmationAction
-  | InputAction
-  | SelectionAction
-  | ErrorAction
-  | CloseAction;
-
-const initialState: ModalStateType = {
-  type: "hidden",
-  action: "",
+const initialState = {
+  show: true,
+  title: "",
   message: "",
 };
 
-const reducer = (state: ModalStateType, action: ModalActionType) => {
+const reducer = (
+  state: ModalStateType,
+  action: ModalActionType
+): ModalStateType => {
   switch (action.type) {
     case "overwrite":
+      return {
+        show: true,
+        title: "Overwrite",
+        message: `Target directory has files with the same name.\n
+          Are you sure you want to overwrite them?`,
+        list: action.payload.list,
+        input: false,
+        selection: false,
+        callback: action.payload.callback,
+      };
     case "delete":
       return {
-        ...state,
-        type: "confirmation",
-        action: action.type,
-        message: action.message,
-        error: undefined,
-        callback: action.callback,
+        show: true,
+        title: "Delete",
+        message: `Are you sure you want to delete these files?`,
+        list: action.payload.list,
+        input: false,
+        selection: false,
+        callback: action.payload.callback,
       };
     case "mkdir":
+      return {
+        show: true,
+        title: "Create a directory",
+        message: `Type a name for a directory`,
+        list: undefined,
+        input: true,
+        selection: false,
+        callback: action.payload.callback,
+      };
     case "rename":
       return {
-        ...state,
-        type: "input",
-        action: action.type,
-        message: action.message,
-        error: undefined,
-        callback: action.callback,
+        show: true,
+        title: "Rename",
+        message: `Type a new name for a file`,
+        list: undefined,
+        input: true,
+        selection: false,
+        callback: action.payload.callback,
       };
     case "move":
       return {
-        ...state,
-        type: "selection",
-        action: action.type,
-        message: action.message,
-        error: undefined,
-        directories: action.list,
-        callback: action.callback,
+        show: true,
+        title: "Move",
+        message: `Select a directory to which you want to move a file`,
+        list: action.payload.list,
+        input: false,
+        selection: true,
+        callback: action.payload.callback,
       };
-    case "error":
-      return { ...state, error: action.message };
+    case "rename":
+      return {
+        show: true,
+        title: "Rename",
+        message: `Type a new name for a file`,
+        list: undefined,
+        input: true,
+        selection: false,
+        callback: action.payload.callback,
+      };
     case "close":
       return initialState;
     default:
@@ -93,64 +101,4 @@ const reducer = (state: ModalStateType, action: ModalActionType) => {
 
 const useModalWindow = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
-
-  const overwriteFiles = (
-    message: string,
-    callback: (files: FileType[]) => void
-  ) => {
-    dispatch({ type: "overwrite", message, callback });
-  };
-
-  const deleteFiles = (
-    message: string,
-    callback: (files: FileType[]) => void
-  ) => {
-    dispatch({ type: "delete", message, callback });
-  };
-
-  const makeDirectory = (
-    message: string,
-    callback: (filename: string) => void
-  ) => {
-    dispatch({ type: "mkdir", message, callback });
-  };
-
-  const renameFile = (
-    message: string,
-    callback: (filename: string, newFilename?: string) => void
-  ) => {
-    dispatch({ type: "rename", message, callback });
-  };
-
-  const moveFile = (
-    message: string,
-    directories: string[],
-    callback: (file: FileType) => void
-  ) => {
-    dispatch({ type: "move", message, list: directories, callback });
-  };
-
-  const showError = (error: string) => {
-    dispatch({ type: "error", message: error });
-  };
-
-  const closeModal = () => {
-    dispatch({ type: "close" });
-  };
-
-  return {
-    state,
-    service: {
-      overwriteFiles,
-      deleteFiles,
-      makeDirectory,
-      renameFile,
-      moveFile,
-      showError,
-      closeModal,
-    },
-  } as const;
 };
-
-export { type ModalStateType };
-export default useModalWindow;

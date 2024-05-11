@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
+import eventBus from "../common/eventBus";
 import TokenService from "./token-service";
 
 const instance = axios.create({
@@ -34,8 +35,13 @@ instance.interceptors.request.use((request) => {
 });
 
 createAuthRefreshInterceptor(instance, (failedRequest: AxiosError) =>
-  refreshAuthLogic(failedRequest).catch((error: AxiosError) => {
-    if (error.response?.status === 403) throw error;
+  refreshAuthLogic(failedRequest).catch((error: AxiosError<APIError>) => {
+    if (error.response?.status === 403) {
+        eventBus.dispatch("logout");
+        window.alert(
+          "Your session has expired. Please make a new login request"
+        );
+      };
   })
 );
 
