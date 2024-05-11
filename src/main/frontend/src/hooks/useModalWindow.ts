@@ -82,16 +82,6 @@ const reducer = (
         selection: true,
         callback: action.payload.callback,
       };
-    case "rename":
-      return {
-        show: true,
-        title: "Rename",
-        message: `Type a new name for a file`,
-        list: undefined,
-        input: true,
-        selection: false,
-        callback: action.payload.callback,
-      };
     case "close":
       return initialState;
     default:
@@ -101,4 +91,42 @@ const reducer = (
 
 const useModalWindow = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  const overwriteFiles = (list: string[], callback: () => void) => {
+    dispatch({ type: "overwrite", payload: { list, callback } });
+  };
+
+  const deleteFiles = (list: string[], callback: () => void) => {
+    dispatch({ type: "delete", payload: { list, callback } });
+  };
+
+  const createDirectory = (callback: () => void) => {
+    dispatch({ type: "mkdir", payload: { callback } });
+  };
+
+  const renameFile = (callback: () => void) => {
+    dispatch({ type: "rename", payload: { callback } });
+  };
+
+  const moveFile = (list: string[], callback: () => void) => {
+    dispatch({ type: "move", payload: { list, callback } });
+  };
+
+  const closeModal = () => {
+    dispatch({ type: "close", payload: {} });
+  };
+
+  return {
+    state,
+    service: {
+      overwriteFiles,
+      deleteFiles,
+      createDirectory,
+      renameFile,
+      moveFile,
+      closeModal,
+    },
+  };
 };
+
+export default useModalWindow;
