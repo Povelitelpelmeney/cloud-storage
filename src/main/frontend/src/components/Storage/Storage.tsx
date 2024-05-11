@@ -13,12 +13,12 @@ import "./Storage.scss";
 const Storage = () => {
   const [path, setPath] = useState<string[]>([]);
   const [files, setFiles] = useState<FileType[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const uploadInput = useRef(null);
   const { state: contextState, service: contextService } = useContextMenu();
   // const { state: modalState, service: modalService } = useModalWindow();
 
-  const selectFile = (fileId: number) => {
+  const selectFile = (fileId: string) => {
     const index = selectedFiles.indexOf(fileId);
     if (index === -1) setSelectedFiles((files) => [...files, fileId]);
     else setSelectedFiles((files) => files.filter((name) => fileId !== name));
@@ -142,7 +142,7 @@ const Storage = () => {
       <div className="files">
         {path.length > 0 && (
           <FileComponent
-            id={0}
+            id={""}
             name={"..."}
             type={"directory"}
             lastModified={0}
