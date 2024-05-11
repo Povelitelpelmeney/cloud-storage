@@ -1,6 +1,7 @@
 package com.example.cloudstorage.controllers;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,10 +11,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.example.cloudstorage.services.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +21,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.apache.tika.Tika;
+
+import org.jetbrains.annotations.NotNull;
+
+import com.example.cloudstorage.services.UserDetailsImpl;
 import com.example.cloudstorage.services.StorageService;
 import com.example.cloudstorage.payload.response.FileResponse;
 import com.example.cloudstorage.exceptions.storage.StorageException;
@@ -63,22 +68,27 @@ public class StorageController {
     @GetMapping("/load/{*path}")
     @ResponseBody
     public ResponseEntity<Resource> downloadFile(@AuthenticationPrincipal UserDetailsImpl user,
-                                                 @PathVariable String path) {
+                                                 @PathVariable String path) throws IOException {
         if (path.isEmpty() || path.equals("/"))
             throw new StorageInvalidRequestException("Trying to load a root folder");
 
-        ByteArrayResource file = this.storageService.loadAsResource(Paths.get(user.getUsername(), path));
+        final Path filePath = Paths.get(user.getUsername(), path);
+        Resource file = this.storageService.loadAsResource(filePath);
+        String type = new Tika().detect(file.getFilename());
+        String contentType = type != null ? type : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        String filename = file.getFilename();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"");
-        headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
-        headers.add("Pragma", "no-cache");
-        headers.add("Expires", "0");
+        if (!filePath.getFileName().toString().equals(filename)) {
+            assert filename != null;
+            this.storageService.delete(filePath.getParent().resolve(filename));
+            filename = filePath.getFileName() + ".zip";
+        }
+
+        final HttpHeaders headers = getDownloadHeaders(filename, contentType);
 
         return ResponseEntity.ok()
-                .headers(headers)
                 .contentLength(file.contentLength())
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .headers(headers)
                 .body(file);
     }
 
@@ -172,5 +182,20 @@ public class StorageController {
         } catch (IOException e) {
             throw new StorageException("Failed to read file's attributes");
         }
+    }
+
+    private static @NotNull HttpHeaders getDownloadHeaders(String filename, String contentType) {
+        ContentDisposition contentDisposition = ContentDisposition.builder("attachment")
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString());
+        headers.add(HttpHeaders.CONTENT_TYPE, contentType);
+        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+        headers.add(HttpHeaders.PRAGMA, "no-cache");
+        headers.add(HttpHeaders.EXPIRES, "0");
+        return headers;
     }
 }
