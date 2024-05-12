@@ -57,18 +57,17 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        return http.csrf(AbstractHttpConfigurer::disable)
                 .headers(httpSecurityHeadersConfigurer ->
                         httpSecurityHeadersConfigurer.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(this.unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll());
-        http.authenticationProvider(this.authenticationProvider());
-        http.addFilterBefore(this.authenticationJwtTokenFilter(),
-                UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+                        .anyRequest().permitAll())
+                .authenticationProvider(this.authenticationProvider())
+                .addFilterBefore(this.authenticationJwtTokenFilter(),
+                        UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 }
