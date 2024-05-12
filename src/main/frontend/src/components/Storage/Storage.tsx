@@ -225,7 +225,7 @@ const Storage = () => {
         .filter((name) => files.map((file) => file.name).includes(name));
       if (duplicates.length > 0) {
         modalService.overwriteFiles(duplicates, async () => {
-          uploadFiles(e).catch((error: AxiosError<APIError>) => {
+          await uploadFiles(e).catch((error: AxiosError<APIError>) => {
             modalService.showError(
               error.response?.data.message || error.message
             );
@@ -236,16 +236,14 @@ const Storage = () => {
   };
 
   const modalCreateDirectory = async () => {
-    modalService.createDirectory((input?: string) => {
-      if (input) return createDirectory(input);
-      else return Promise.resolve();
+    modalService.createDirectory(async (input?: string) => {
+      if (input) return await createDirectory(input);
     });
   };
 
   const modalRenameFile = async (filename: string) => {
-    modalService.renameFile(filename, (input?: string) => {
-      if (input) return renameFile(filename, input);
-      else return Promise.resolve();
+    modalService.renameFile(filename, async (input?: string) => {
+      if (input) return await renameFile(filename, input);
     });
   };
 
@@ -258,9 +256,13 @@ const Storage = () => {
       .map((file) => file.name);
     if (duplicates.length > 0) {
       modalService.overwriteFiles(duplicates, async () => {
-        moveFiles(filenames, targetDir).catch((error: AxiosError<APIError>) => {
-          modalService.showError(error.response?.data.message || error.message);
-        });
+        await moveFiles(filenames, targetDir).catch(
+          (error: AxiosError<APIError>) => {
+            modalService.showError(
+              error.response?.data.message || error.message
+            );
+          }
+        );
         cancelSelection();
       });
     } else await moveFiles(filenames, targetDir);
