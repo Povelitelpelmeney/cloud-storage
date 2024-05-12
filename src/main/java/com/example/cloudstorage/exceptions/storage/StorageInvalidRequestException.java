@@ -14,7 +14,6 @@ public class StorageInvalidRequestException extends StorageException {
         super(message);
     }
 
-    @SuppressWarnings("unused")
     public StorageInvalidRequestException(String message, Throwable cause) {
         super(message, cause);
     }
