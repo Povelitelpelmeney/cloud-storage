@@ -25,7 +25,7 @@ type RefreshTokenResponse = {
 };
 
 type FileType = {
-  id: number;
+  id: string;
   name: string;
   type: string;
   lastModified: number;
@@ -40,3 +40,5 @@ type APIError = {
   message: string;
   path: string;
 };
+
+type TypeDiff<T, U> = Pick<T, Exclude<keyof T, keyof U>>;

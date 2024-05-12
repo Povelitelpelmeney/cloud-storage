@@ -1,17 +1,13 @@
 $wallpaper: "./assets/images/wallpaper.jpg";
 
-@mixin hover {
-  opacity: 0.5;
-}
-
 @mixin nav-link {
   cursor: pointer;
-  transition: opacity 300ms ease;
+  transition: opacity 0.3s ease;
   color: black;
   margin: 8px;
 
   &:hover {
-    @include hover;
+    opacity: 0.5;
   }
 }
 
@@ -52,11 +48,7 @@ main {
   display: flex;
   min-height: 80vh;
   justify-content: center;
-
-  background-image: url($wallpaper);
-  background-repeat: no-repeat;
-  background-position: 0, 0;
-  background-size: cover;
+  background: url($wallpaper) 0 0 / cover no-repeat;
 }
 
 footer {
