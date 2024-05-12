@@ -2,10 +2,7 @@ package com.example.cloudstorage.services;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -62,22 +59,22 @@ public class FileSystemStorageService implements StorageService {
     public List<Path> loadDirectory(Path path) {
         Path parent = this.load(path);
         if (!Files.isDirectory(parent))
-            throw new StorageInvalidRequestException("Trying to load files from non-directory");
+            throw new StorageInvalidRequestException("Trying to load files from a location other that a directory");
 
         try (Stream<Path> files = Files.list(parent)) {
             return files.collect(Collectors.toList());
         } catch (IOException e) {
-            throw new StorageException("Failed to read stored files");
+            throw new StorageException("Failed to read stored files", e);
         }
     }
 
     @Override
     public Resource loadAsResource(Path path) {
         Path file = this.load(path);
-        UUID uuid = UUID.randomUUID();
 
         try {
             if (Files.isDirectory(file)) {
+                UUID uuid = UUID.randomUUID();
                 Path zipPath = file.getParent().resolve(uuid + ".zip");
                 try {
                     ZipUtil.pack(file.toFile(), zipPath.toFile());
@@ -91,26 +88,26 @@ public class FileSystemStorageService implements StorageService {
                 };
             } else return new UrlResource(file.toUri());
         } catch (IOException e) {
-            throw new StorageException("Could not read a file");
+            throw new StorageException("Could not read a file", e);
         }
     }
 
     @Override
     public Path uploadFile(Path path, MultipartFile file) {
-        if (file == null || file.isEmpty())
-            throw new StorageInvalidRequestException("Failed to store empty file");
-
         Path parent = this.load(path);
         Path destination = parent.resolve(Objects.requireNonNull(file.getOriginalFilename()));
         if (!Files.isDirectory(parent))
-            throw new StorageInvalidRequestException("Trying to load a file in a non-directory");
+            throw new StorageInvalidRequestException("Trying to upload a file to a location other than a directory");
 
         try {
             InputStream inputStream = file.getInputStream();
             Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
             return destination;
+        } catch (DirectoryNotEmptyException e) {
+            throw new StorageInvalidRequestException(
+                    "Non-empty directory with name '" + file.getOriginalFilename() + "' already exists", e);
         } catch (IOException e) {
-            throw new StorageException("Failed to store file", e);
+            throw new StorageException("Failed to store a file", e);
         }
     }
 
@@ -118,14 +115,22 @@ public class FileSystemStorageService implements StorageService {
     public Path createDirectory(Path path, String name) {
         Path parent = this.load(path);
         if (!Files.isDirectory(parent))
-            throw new StorageInvalidRequestException("Unable to create a directory inside of a regular file");
+            throw new StorageInvalidRequestException("Cannot to create a directory inside of a regular file");
+
+        String parsedName = name.replaceAll("\\.+$", "");
+        if (parsedName.isEmpty())
+            throw new StorageInvalidRequestException("Invalid name for a directory");
 
         try {
-            Path destination = parent.resolve(name.replaceAll("\\.+$", ""));
+            Path destination = parent.resolve(parsedName);
             Files.createDirectory(destination);
             return destination;
+        } catch (FileAlreadyExistsException e) {
+            throw new StorageInvalidRequestException("File with name '" + parsedName + "' already exists", e);
+        } catch (InvalidPathException e) {
+            throw new StorageInvalidRequestException("Invalid name for a directory", e);
         } catch (IOException e) {
-            throw new StorageInvalidRequestException("Invalid name for a directory");
+            throw new StorageException("Could not create a directory", e);
         }
     }
 
@@ -141,8 +146,11 @@ public class FileSystemStorageService implements StorageService {
             Path newFile = target.resolve(file.getFileName());
             Files.move(file, newFile, StandardCopyOption.REPLACE_EXISTING);
             return newFile;
+        } catch (DirectoryNotEmptyException e) {
+            throw new StorageInvalidRequestException(
+                    "Non-empty directory with name '" + file.getFileName() + "' already exists", e);
         } catch (IOException e) {
-            throw new StorageException("Could not move a file/directory");
+            throw new StorageException("Could not move a file", e);
         }
     }
 
@@ -150,13 +158,20 @@ public class FileSystemStorageService implements StorageService {
     public Path rename(Path path, String newName) {
         Path file = this.load(path);
         Path parent = file.getParent();
+        String parsedName = newName.replaceAll("\\.+$", "");
+        if (parsedName.isEmpty())
+            throw new StorageInvalidRequestException("Invalid name for a file");
 
         try {
-            Path newFile = parent.resolve(newName.replaceAll("\\.+$", ""));
+            Path newFile = parent.resolve(parsedName);
             Files.move(file, newFile);
             return newFile;
+        } catch (FileAlreadyExistsException e) {
+            throw new StorageInvalidRequestException("File with name '" + parsedName + "' already exists", e);
+        } catch (InvalidPathException e) {
+            throw new StorageInvalidRequestException("Invalid name for a file", e);
         } catch (IOException e) {
-            throw new StorageInvalidRequestException("Invalid name for a file/directory");
+            throw new StorageException("Could not rename a file", e);
         }
     }
 
@@ -167,7 +182,7 @@ public class FileSystemStorageService implements StorageService {
         try {
             FileSystemUtils.deleteRecursively(file);
         } catch (IOException e) {
-            throw new StorageException("Could not delete a file/directory");
+            throw new StorageException("Could not delete a file/directory", e);
         }
     }
 }
