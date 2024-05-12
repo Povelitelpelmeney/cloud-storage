@@ -129,6 +129,7 @@
                     <nodeVersion>${node.version}</nodeVersion>
                     <npmVersion>${npm.version}</npmVersion>
                     <workingDirectory>${frontend-src-dir}</workingDirectory>
+                    <installDirectory>${project.build.directory}</installDirectory>
                 </configuration>
 
                 <executions>
@@ -143,12 +144,9 @@
                         <goals>
                             <goal>npm</goal>
                         </goals>
-                        <configuration>
-                            <arguments>install</arguments>
-                        </configuration>
                     </execution>
                     <execution>
-                        <id>build frontend</id>
+                        <id>npm run build</id>
                         <goals>
                             <goal>npm</goal>
                         </goals>
