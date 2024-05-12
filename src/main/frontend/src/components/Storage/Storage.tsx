@@ -285,8 +285,7 @@ const Storage = () => {
         ref={uploadInput}
         type="file"
         onChange={(e) =>
-          modalUploadFiles(e).catch((error: AxiosError<APIError>) => {
-            console.log(error)
+          modalUploadFiles(e).catch(() => {
             modalService.showError("Maximum upload size exceeded (1 GB)");
           })
         }
