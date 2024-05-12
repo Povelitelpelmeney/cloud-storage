@@ -1,67 +1,14 @@
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  transition: background-color 150ms ease;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
 .modal-window {
-  position: fixed;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  width: 500px;
-  height: 250px;
-  background-color: aliceblue;
-  border: 1px solid black;
-  border-radius: 30px;
-
-  .modal-message {
-    font-size: 24px;
-    margin-top: -60px;
-    margin-left: -30px;
+  .text {
+    font-size: 18px;
   }
 
-  .modal-button {
-    position: absolute;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    user-select: none;
+  .list {
+    overflow-y: auto;
+    max-height: 75px;
+  }
 
-    &:hover {
-      opacity: 0.75;
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
-
-    &.close {
-      top: -3%;
-      right: 5%;
-      font-size: 3rem;
-      color: #444;
-      border: none;
-      background: none;
-    }
-
-    &.confirm {
-      bottom: 3%;
-      right: 5%;
-      margin: 10px;
-      margin-bottom: 15px;
-      border: 1px solid black;
-      border-radius: 15px;
-      background-color: ghostwhite;
-      font-size: 18px;
-      width: 100px;
-      height: 35px;
-    }
+  .input-field {
+    text-decoration: none;
   }
 }

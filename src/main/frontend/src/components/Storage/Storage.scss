@@ -67,4 +67,14 @@
     height: 100%;
     overflow-y: auto;
   }
+
+  .file-icon-wrapper,
+  .dir-icon-wrapper {
+    display: none;
+  }
+
+  #drag-icon {
+    position: absolute;
+    transform: translate(-1000%, -1000%);
+  }
 }

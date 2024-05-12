@@ -1,4 +1,5 @@
 .file {
+  position: relative;
   display: flex;
   flex-direction: row;
   gap: 10px;
@@ -8,6 +9,32 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   border-radius: 15px;
   transition: box-shadow 150ms ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &:hover:not(.selected) {
+    box-shadow: inset 0 0 0 1000px rgba(215, 215, 215, 0.75);
+  }
+
+  &.selected {
+    box-shadow: inset 0 0 0 1000px rgba(190, 190, 190, 0.75);
+  }
+
+  &.drag-over {
+    box-shadow: inset 0 0 0 1000px rgba(165, 165, 165, 0.75);
+  }
+
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
 
   .filename,
   .file-last-modified,
@@ -26,13 +53,5 @@
   .file-last-modified,
   .file-size {
     flex: 0.2;
-  }
-
-  &:hover:not(.selected) {
-    box-shadow: inset 0 0 0 1000px rgba(215, 215, 215, 0.6);
-  }
-
-  &.selected {
-    box-shadow: inset 0 0 0 1000px rgba(190, 190, 190, 0.75);
   }
 }

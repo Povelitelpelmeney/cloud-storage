@@ -5,6 +5,7 @@ type FileContexMenuProps = {
   top: number;
   left: number;
   download: (filename: string) => Promise<void>;
+  rename: (filename: string) => Promise<void>;
   delete: (filename: string) => Promise<void>;
 };
 
@@ -17,7 +18,10 @@ const FileContexMenu = (props: FileContexMenuProps) => {
       >
         Download
       </div>
-      <div className="context-menu-item" onClick={() => console.log("rename")}>
+      <div
+        className="context-menu-item"
+        onClick={() => props.rename(props.filename)}
+      >
         Rename
       </div>
       <div

@@ -3,6 +3,15 @@ const getTokenType = () => {
   return user?.type;
 };
 
+const updateTokenType = (type: string) => {
+  const user = getUser();
+
+  if (user) {
+    user.type = type;
+    setUser(user);
+  }
+};
+
 const getLocalRefreshToken = () => {
   const user = getUser();
   return user?.refreshToken;
@@ -40,6 +49,7 @@ const removeUser = () => {
 
 const TokenService = {
   getTokenType,
+  updateTokenType,
   getLocalRefreshToken,
   getLocalAccessToken,
   updateLocalAccessToken,
