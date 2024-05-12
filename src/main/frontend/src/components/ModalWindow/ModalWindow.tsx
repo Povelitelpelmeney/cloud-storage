@@ -33,7 +33,7 @@ const ModalWindow = (props: ModalWindowProps) => {
   };
 
   const submit = async () => {
-    if (!props.state.type || !props.state.callback) return;
+    if (!props.state.type || !props.state.callback || loading) return;
 
     setLoading(true);
     if (infoTypes.includes(props.state.type)) await props.state.callback();
