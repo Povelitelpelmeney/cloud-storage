@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
-import eventBus from "../common/eventBus";
 import TokenService from "./token-service";
+import eventBus from "../common/eventBus";
 
 const instance = axios.create({
   baseURL: "http://localhost:8080",

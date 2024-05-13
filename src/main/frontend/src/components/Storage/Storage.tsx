@@ -220,15 +220,22 @@ const Storage = () => {
 
   const modalUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
+      const uploadingNow = Array.from(e.target.files)
+        .map((file) => file.name)
+        .reduce((acc, cur) => acc || uploadingFiles.includes(cur), false);
+      if (uploadingNow) {
+        modalService.showError("Uploading these files right now, please wait");
+        return;
+      }
       const duplicates = Array.from(e.target.files)
         .map((file) => file.name)
         .filter((name) => files.map((file) => file.name).includes(name));
       if (duplicates.length > 0) {
         modalService.overwriteFiles(duplicates, async () => {
           await uploadFiles(e).catch((error: AxiosError<APIError>) => {
-            modalService.showError(
-              error.response?.data.message || error.message
-            );
+            if (error.response?.status === 400)
+              modalService.showError(error.response?.data.message);
+            throw error;
           });
         });
       } else await uploadFiles(e);
@@ -256,14 +263,14 @@ const Storage = () => {
       .map((file) => file.name);
     if (duplicates.length > 0) {
       modalService.overwriteFiles(duplicates, async () => {
+        cancelSelection();
         await moveFiles(filenames, targetDir).catch(
           (error: AxiosError<APIError>) => {
-            modalService.showError(
-              error.response?.data.message || error.message
-            );
+            if (error.response?.status === 400)
+              modalService.showError(error.response?.data.message);
+            throw error;
           }
         );
-        cancelSelection();
       });
     } else await moveFiles(filenames, targetDir);
   };

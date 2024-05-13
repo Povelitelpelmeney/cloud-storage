@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { AxiosError } from "axios";
 import { Button, Form, FormGroup, Modal } from "react-bootstrap";
+import { AxiosError } from "axios";
 import { ModalType, ModalStateType } from "../../hooks/useModalWindow";
 import "./ModalWindow.scss";
 
