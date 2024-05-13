@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { IconContext } from "react-icons";
 import { FcFile } from "react-icons/fc";
 import { FcFolder } from "react-icons/fc";
-import useSingleAndDoubleClick from "../../hooks/useSingleAndDoubleClick";
 import "./FileComponent.scss";
 
 type FileComponentProps = {
@@ -20,17 +19,16 @@ const FileComponent = (props: FileComponentProps) => {
   const [lastModified, setLastModified] = useState<string>("");
   const [size, setSize] = useState<string>("");
   const [dragOver, setDragOver] = useState<boolean>(false);
-  const { handleClick, handleDoubleClick } = useSingleAndDoubleClick(
-    () => props.select && props.select(),
-    () => props.goto && props.goto()
-  );
 
   const parseDate = useCallback((timestamp: number) => {
+    if (timestamp === -1) return "";
     const date = new Date(timestamp);
     return date.toLocaleDateString();
   }, []);
 
   const parseSize = useCallback((size: number) => {
+    if (size === -1) return "";
+
     const sizes = ["B", "KB", "MB", "GB", "TB"];
     let counter = 0;
 
@@ -65,8 +63,8 @@ const FileComponent = (props: FileComponentProps) => {
   };
 
   useEffect(() => {
-    setLastModified(props.name === "..." ? "" : parseDate(props.lastModified));
-    setSize(props.type === "directory" ? "" : parseSize(props.size));
+    setLastModified(parseDate(props.lastModified));
+    setSize(parseSize(props.size));
   }, [props, parseDate, parseSize]);
 
   return (
@@ -74,8 +72,8 @@ const FileComponent = (props: FileComponentProps) => {
       className={`file${props.disabled ? " disabled" : ""}${
         !props.disabled && props.selected ? " selected" : ""
       }${!props.disabled && dragOver ? " drag-over" : ""}`}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
+      onClick={() => props.select && props.select()}
+      onDoubleClick={() => props.goto && props.goto()}
       {...(props.onContexMenu && { onContextMenu: props.onContexMenu })}
     >
       {!props.disabled && (
@@ -97,7 +95,7 @@ const FileComponent = (props: FileComponentProps) => {
         ></div>
       )}
       <IconContext.Provider value={{ className: "file-icon", size: "40" }}>
-        {props.type === "directory" ? <FcFolder /> : <FcFile />}
+        {props.type === "file" ? <FcFile /> : <FcFolder />}
       </IconContext.Provider>
       <div className="filename">{props.name}</div>
       <div className="file-last-modified">{lastModified}</div>

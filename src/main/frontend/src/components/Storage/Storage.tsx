@@ -23,8 +23,8 @@ const Storage = () => {
   const [files, setFiles] = useState<FileType[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [disabledFiles, setDisabledFiles] = useState<string[]>([]);
-  const [draggedFile, setDraggedFile] = useState<string>("");
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+  const [draggedFile, setDraggedFile] = useState<string>("");
   const uploadInput = useRef<HTMLInputElement>(null);
   const fileIcon = useRef<HTMLDivElement>(null);
   const dirIcon = useRef<HTMLDivElement>(null);
@@ -40,10 +40,6 @@ const Storage = () => {
   const selectAll = () => {
     setSelectedFiles(files.map((file) => file.id));
   };
-
-  const cancelSelection = useCallback(() => {
-    setSelectedFiles([]);
-  }, []);
 
   const enableFile = (filename: string) => {
     setDisabledFiles((prevFiles) =>
@@ -78,16 +74,16 @@ const Storage = () => {
     if (selected) {
       filesToMove = selectedFiles.map(getNameById);
     } else {
-      cancelSelection();
+      setSelectedFiles([]);
       filesToMove = [filename];
     }
 
     const type = files.find((file) => file.name === filename)!.type;
     const dragImage = document.getElementById("drag-icon")!;
     dragImage.innerHTML =
-      type === "directory"
-        ? dirIcon.current!.innerHTML
-        : fileIcon.current!.innerHTML;
+      type === "file"
+        ? fileIcon.current!.innerHTML
+        : dirIcon.current!.innerHTML;
     e.dataTransfer.setData("text/plain", JSON.stringify(filesToMove));
     e.dataTransfer.setDragImage(dragImage, 0, 0);
   };
@@ -107,18 +103,21 @@ const Storage = () => {
   };
 
   const gotoDirectory = (directoryName: string) => {
-    setPath((path) => [...path, directoryName]);
+    if (disabledFiles.length > 0 || uploadingFiles.length > 0)
+      modalService.showError("Previous task is in process, please wait.");
+    else setPath((path) => [...path, directoryName]);
   };
 
   const goBack = () => {
-    if (path.length > 0) setPath((path) => path.slice(0, -1));
+    if (disabledFiles.length > 0 || uploadingFiles.length > 0)
+      modalService.showError("Previous task is in process, please wait.");
+    else if (path.length > 0) setPath((path) => path.slice(0, -1));
   };
 
   const getFiles = useCallback(async () => {
     const files = await UserService.getFiles(path);
-    cancelSelection();
     setFiles(files);
-  }, [path, cancelSelection]);
+  }, [path]);
 
   const downloadFile = async (filename: string) => {
     const response = await UserService.downloadFile(path, filename);
@@ -140,11 +139,11 @@ const Storage = () => {
     await Promise.all(promises);
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, uploadPath: string[]) => {
     const formData = new FormData();
     formData.append("file", file, file.name);
     setUploadingFiles((prevFiles) => [...prevFiles, file.name]);
-    const response = await UserService.uploadFile(path, formData).catch(
+    const response = await UserService.uploadFile(uploadPath, formData).catch(
       (error: AxiosError) => {
         setUploadingFiles((prevFiles) =>
           prevFiles.filter((filename) => filename !== file.name)
@@ -152,30 +151,23 @@ const Storage = () => {
         throw error;
       }
     );
-    removeFile(response.name);
-    setFiles((prevFiles) => [...prevFiles, response]);
-    setUploadingFiles((prevFiles) =>
-      prevFiles.filter((filename) => filename !== file.name)
-    );
+    if (path === uploadPath) {
+      removeFile(response.name);
+      setFiles((prevFiles) => [...prevFiles, response]);
+      setUploadingFiles((prevFiles) =>
+        prevFiles.filter((filename) => filename !== file.name)
+      );
+    }
   };
 
-  const uploadFiles = async (files: File[]) => {
-    const promises = files.map((file) => uploadFile(file));
+  const uploadFiles = async (files: File[], uploadPath: string[]) => {
+    const promises = files.map((file) => uploadFile(file, uploadPath));
     await Promise.all(promises);
   };
 
   const createDirectory = async (directoryName: string) => {
     const response = await UserService.createDirectory(path, directoryName);
     setFiles((prevFiles) => [response, ...prevFiles]);
-  };
-
-  const renameFile = async (filename: string, newName: string) => {
-    await UserService.renameFile(path, filename, newName);
-    setFiles((prevFiles) =>
-      prevFiles.map((file) =>
-        file.name === filename ? { ...file, name: newName } : file
-      )
-    );
   };
 
   const moveFile = async (filename: string, targetDir: string) => {
@@ -193,6 +185,15 @@ const Storage = () => {
   const moveFiles = async (filenames: string[], targetDir: string) => {
     const promises = filenames.map((filename) => moveFile(filename, targetDir));
     await Promise.all(promises);
+  };
+
+  const renameFile = async (filename: string, newName: string) => {
+    disableFile(filename);
+    const response = await UserService.renameFile(path, filename, newName);
+    enableFile(filename);
+    setFiles((prevFiles) =>
+      prevFiles.map((file) => (file.name === filename ? response : file))
+    );
   };
 
   const deleteFile = async (filename: string) => {
@@ -229,7 +230,7 @@ const Storage = () => {
       .filter((name) => files.map((file) => file.name).includes(name));
     if (duplicates.length > 0) {
       modalService.overwriteFiles(duplicates, async () => {
-        await uploadFiles(filesToUpload).catch(
+        await uploadFiles(filesToUpload, path).catch(
           (error: AxiosError<APIError>) => {
             if (error.response?.status === 400)
               modalService.showError(error.response?.data.message);
@@ -237,18 +238,12 @@ const Storage = () => {
           }
         );
       });
-    } else uploadFiles(filesToUpload);
+    } else uploadFiles(filesToUpload, path);
   };
 
   const modalCreateDirectory = async () => {
     modalService.createDirectory(async (input?: string) => {
       if (input) return await createDirectory(input);
-    });
-  };
-
-  const modalRenameFile = async (filename: string) => {
-    modalService.renameFile(filename, async (input?: string) => {
-      if (input) return await renameFile(filename, input);
     });
   };
 
@@ -261,7 +256,7 @@ const Storage = () => {
       .map((file) => file.name);
     if (duplicates.length > 0) {
       modalService.overwriteFiles(duplicates, async () => {
-        cancelSelection();
+        setSelectedFiles([]);
         await moveFiles(filenames, targetDir).catch(
           (error: AxiosError<APIError>) => {
             if (error.response?.status === 400)
@@ -273,6 +268,12 @@ const Storage = () => {
     } else await moveFiles(filenames, targetDir);
   };
 
+  const modalRenameFile = async (filename: string) => {
+    modalService.renameFile(filename, async (input?: string) => {
+      if (input) return await renameFile(filename, input);
+    });
+  };
+
   const modalDeleteFile = async (filename: string) => {
     modalService.deleteFile(() => deleteFile(filename));
   };
@@ -282,6 +283,7 @@ const Storage = () => {
   };
 
   useEffect(() => {
+    setSelectedFiles([]);
     getFiles();
   }, [getFiles]);
 
@@ -318,7 +320,7 @@ const Storage = () => {
         ) : (
           <IconContext.Provider value={{ className: "icon", size: "40" }}>
             <div className="icon-wrapper">
-              <RxCross2 onClick={cancelSelection} />
+              <RxCross2 onClick={() => setSelectedFiles([])} />
               <span className="icon-tooltip">Cancel selection</span>
             </div>
             <div className="icon-wrapper">
@@ -338,8 +340,8 @@ const Storage = () => {
           <FileComponent
             name={"..."}
             type={"directory"}
-            lastModified={0}
-            size={0}
+            lastModified={-1}
+            size={-1}
             disabled={false}
             goto={goBack}
             onDrop={modalMoveFiles}
@@ -352,7 +354,7 @@ const Storage = () => {
             name={file.name}
             type={file.type}
             lastModified={file.lastModified}
-            size={file.size}
+            size={file.type === "file" ? file.size : -1}
             disabled={disabledFiles.includes(file.name)}
             selected={selectedFiles.includes(file.id)}
             dragged={draggedFile === file.name}
@@ -371,8 +373,8 @@ const Storage = () => {
             key={filename}
             name={filename}
             type={"file"}
-            lastModified={0}
-            size={0}
+            lastModified={-1}
+            size={-1}
             disabled={true}
           />
         ))}

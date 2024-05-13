@@ -50,20 +50,6 @@ const createDirectory = async (path: string[], directoryName: string) => {
   return response.data;
 };
 
-const renameFile = async (
-  path: string[],
-  filename: string,
-  newName: string
-) => {
-  const encodedPath = [
-    ...path.map((dir) => encodeURIComponent(dir)),
-    encodeURIComponent(filename),
-  ].join("/");
-  const encodedName = encodeURIComponent(newName);
-  const URI = `${baseURI}/file/${encodedPath}?name=${encodedName}`;
-  await api.patch(URI);
-};
-
 const moveFile = async (
   path: string[],
   filename: string,
@@ -76,6 +62,21 @@ const moveFile = async (
   const encodedName = encodeURIComponent(targetDir);
   const URI = `${baseURI}/file/${encodedPath}?target=${encodedName}`;
   await api.put(URI);
+};
+
+const renameFile = async (
+  path: string[],
+  filename: string,
+  newName: string
+) => {
+  const encodedPath = [
+    ...path.map((dir) => encodeURIComponent(dir)),
+    encodeURIComponent(filename),
+  ].join("/");
+  const encodedName = encodeURIComponent(newName);
+  const URI = `${baseURI}/file/${encodedPath}?name=${encodedName}`;
+  const response = await api.patch<FileType>(URI);
+  return response.data;
 };
 
 const deleteFile = async (path: string[], filename: string) => {
@@ -93,8 +94,8 @@ const UserService = {
   downloadFile,
   uploadFile,
   createDirectory,
-  renameFile,
   moveFile,
+  renameFile,
   deleteFile,
 };
 
