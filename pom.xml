@@ -150,7 +150,6 @@
                         <goals>
                             <goal>npm</goal>
                         </goals>
-                        <phase>prepare-package</phase>
                         <configuration>
                             <arguments>run build</arguments>
                         </configuration>
