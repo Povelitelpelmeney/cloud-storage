@@ -216,6 +216,7 @@ const Storage = () => {
 
   const modalUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const filesToUpload = e.target.files ? Array.from(e.target.files) : [];
+    uploadInput.current!.value = "";
     const uploadingNow = filesToUpload
       .map((file) => file.name)
       .some((name) => uploadingFiles.includes(name));
@@ -294,7 +295,6 @@ const Storage = () => {
           modalUploadFiles(e).catch(() => {
             modalService.showError("Maximum upload size exceeded (1 GB)");
           });
-          uploadInput.current!.value = "";
         }}
         multiple
       />
