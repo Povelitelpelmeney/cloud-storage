@@ -159,13 +159,9 @@ const Storage = () => {
     );
   };
 
-  const uploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const promises = Array.from(e.target.files).map((file) =>
-        uploadFile(file)
-      );
-      await Promise.all(promises);
-    }
+  const uploadFiles = async (files: File[]) => {
+    const promises = files.map((file) => uploadFile(file));
+    await Promise.all(promises);
   };
 
   const createDirectory = async (directoryName: string) => {
@@ -219,27 +215,28 @@ const Storage = () => {
   };
 
   const modalUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const uploadingNow = Array.from(e.target.files)
-        .map((file) => file.name)
-        .reduce((acc, cur) => acc || uploadingFiles.includes(cur), false);
-      if (uploadingNow) {
-        modalService.showError("Uploading these files right now, please wait");
-        return;
-      }
-      const duplicates = Array.from(e.target.files)
-        .map((file) => file.name)
-        .filter((name) => files.map((file) => file.name).includes(name));
-      if (duplicates.length > 0) {
-        modalService.overwriteFiles(duplicates, async () => {
-          await uploadFiles(e).catch((error: AxiosError<APIError>) => {
+    const filesToUpload = e.target.files ? Array.from(e.target.files) : [];
+    const uploadingNow = filesToUpload
+      .map((file) => file.name)
+      .some((name) => uploadingFiles.includes(name));
+    if (uploadingNow) {
+      modalService.showError("Uploading these files right now, please wait");
+      return;
+    }
+    const duplicates = filesToUpload
+      .map((file) => file.name)
+      .filter((name) => files.map((file) => file.name).includes(name));
+    if (duplicates.length > 0) {
+      modalService.overwriteFiles(duplicates, async () => {
+        await uploadFiles(filesToUpload).catch(
+          (error: AxiosError<APIError>) => {
             if (error.response?.status === 400)
               modalService.showError(error.response?.data.message);
             throw error;
-          });
-        });
-      } else await uploadFiles(e);
-    }
+          }
+        );
+      });
+    } else uploadFiles(filesToUpload);
   };
 
   const modalCreateDirectory = async () => {
@@ -293,11 +290,12 @@ const Storage = () => {
         className="upload-input"
         ref={uploadInput}
         type="file"
-        onChange={(e) =>
+        onChange={(e) => {
           modalUploadFiles(e).catch(() => {
             modalService.showError("Maximum upload size exceeded (1 GB)");
-          })
-        }
+          });
+          uploadInput.current!.value = "";
+        }}
         multiple
       />
 
