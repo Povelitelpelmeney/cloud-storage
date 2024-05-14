@@ -19,31 +19,30 @@ instance.interceptors.request.use((request) => {
 });
 
 const refreshAuthLogic = async (failedRequest: AxiosError) => {
-  const refreshToken = TokenService.getLocalRefreshToken();
-  const response = await instance.post<RefreshTokenResponse>(
-    "/api/auth/refresh",
-    { token: refreshToken }
-  );
+  try {
+    const refreshToken = TokenService.getLocalRefreshToken();
+    const response = await instance.post<RefreshTokenResponse>(
+      "/api/auth/refresh",
+      { token: refreshToken }
+    );
 
-  const type = response.data.type;
-  const token = response.data.accessToken;
-  TokenService.updateTokenType(type);
-  TokenService.updateLocalAccessToken(token);
+    const type = response.data.type;
+    const token = response.data.accessToken;
+    TokenService.updateTokenType(type);
+    TokenService.updateLocalAccessToken(token);
 
-  if (failedRequest.response)
-    failedRequest.response.config.headers["authorization"] = `${type} ${token}`;
-  return Promise.resolve();
+    const authHeader = `${type} ${token}`;
+    failedRequest.response!.config.headers["authorization"] = authHeader;
+  } catch (error: unknown) {
+    eventBus.dispatch("logout");
+    if (error instanceof AxiosError && error.response?.status === 403)
+      window.alert("Your session has expired. Please make a new login request");
+    else if (error instanceof AxiosError) {
+      console.error(error.response?.data.message || error.response);
+    }
+  }
 };
 
-createAuthRefreshInterceptor(instance, (failedRequest: AxiosError) =>
-  refreshAuthLogic(failedRequest).catch((error: AxiosError<APIError>) => {
-    eventBus.dispatch("logout");
-    if (error.response?.status === 403) {
-      window.alert("Your session has expired. Please make a new login request");
-    } else if (error.response?.status === 404) {
-      console.error(error.response?.data.message);
-    }
-  })
-);
+createAuthRefreshInterceptor(instance, refreshAuthLogic);
 
 export default instance;

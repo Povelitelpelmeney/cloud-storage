@@ -41,12 +41,13 @@ public class StorageController {
 
     @GetMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> load(@AuthenticationPrincipal UserDetailsImpl user,
-                                             @PathVariable String path) {
-        if (path.isEmpty() || path.equals("/"))
-            throw new StorageInvalidRequestException("Trying to load a root folder");
+    public ResponseEntity<FileResponse> loadFile(@AuthenticationPrincipal UserDetailsImpl user,
+                                                 @PathVariable String path,
+                                                 @RequestParam("src") String source) {
+        if (source.isEmpty())
+            throw new StorageInvalidRequestException("Invalid parameters for load request", source);
 
-        Path file = this.storageService.load(Paths.get(user.getUsername(), path));
+        Path file = this.storageService.loadFile(Paths.get(user.getUsername(), path, source));
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
@@ -54,8 +55,8 @@ public class StorageController {
 
     @GetMapping("/files/{*path}")
     @ResponseBody
-    public ResponseEntity<List<FileResponse>> loadAll(@AuthenticationPrincipal UserDetailsImpl user,
-                                                      @PathVariable(required = false) String path) {
+    public ResponseEntity<List<FileResponse>> loadDirectory(@AuthenticationPrincipal UserDetailsImpl user,
+                                                            @PathVariable String path) {
         List<Path> directory = this.storageService.loadDirectory(Paths.get(user.getUsername(), path));
         List<FileResponse> responses = directory.stream()
                 .map(this::buildFileResponse)
@@ -69,11 +70,12 @@ public class StorageController {
     @GetMapping("/load/{*path}")
     @ResponseBody
     public ResponseEntity<Resource> downloadFile(@AuthenticationPrincipal UserDetailsImpl user,
-                                                 @PathVariable String path) throws IOException {
-        if (path.isEmpty() || path.equals("/"))
-            throw new StorageInvalidRequestException("Trying to load a root folder");
+                                                 @PathVariable String path,
+                                                 @RequestParam("src") String source) throws IOException {
+        if (source.isEmpty())
+            throw new StorageInvalidRequestException("Invalid parameters for download request", source);
 
-        final Path filePath = Paths.get(user.getUsername(), path);
+        final Path filePath = Paths.get(user.getUsername(), path, source);
         Resource file = this.storageService.loadAsResource(filePath);
         String type = new Tika().detect(file.getFilename());
         String contentType = type != null ? type : MediaType.APPLICATION_OCTET_STREAM_VALUE;
@@ -81,7 +83,7 @@ public class StorageController {
 
         if (!filePath.getFileName().toString().equals(filename)) {
             assert filename != null;
-            this.storageService.delete(filePath.getParent().resolve(filename));
+            this.storageService.deleteFile(filePath.getParent().resolve(filename));
             filename = filePath.getFileName() + ".zip";
         }
 
@@ -133,39 +135,78 @@ public class StorageController {
 
     @PutMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> move(@AuthenticationPrincipal UserDetailsImpl user,
-                                             @PathVariable String path,
-                                             @RequestParam("target") String name) {
-        if (path.isEmpty() || path.equals("/"))
-            throw new StorageInvalidRequestException("Trying to move a root folder");
+    public ResponseEntity<FileResponse> moveFile(@AuthenticationPrincipal UserDetailsImpl user,
+                                                 @PathVariable String path,
+                                                 @RequestParam("src") String source,
+                                                 @RequestParam("dest") String destination) {
+        if (source.isEmpty() || destination.isEmpty())
+            throw new StorageInvalidRequestException("Invalid parameters for move request", source);
 
-        Path file = this.storageService.move(Paths.get(user.getUsername(), path), name);
+        Path file = this.storageService.moveFile(Paths.get(user.getUsername(), path, source), destination);
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/files/{*path}")
+    @ResponseBody
+    public ResponseEntity<List<FileResponse>> moveFiles(@AuthenticationPrincipal UserDetailsImpl user,
+                                                        @PathVariable String path,
+                                                        @RequestParam("src") String source,
+                                                        @RequestParam("dest") String destination) {
+        List<String> sources = Arrays.stream(source.split("<")).toList();
+        if (sources.isEmpty() || sources.contains("") || destination.isEmpty())
+            throw new StorageInvalidRequestException("Invalid parameters for move request", source);
+
+        List<FileResponse> responses = sources.stream()
+                .map(filename ->
+                        this.storageService.moveFile(Paths.get(user.getUsername(), path, filename), destination))
+                .map(this::buildFileResponse)
+                .sorted(Comparator.comparing(FileResponse::getLastModified))
+                .sorted(Comparator.comparing(FileResponse::getType))
+                .toList();
+
+        return ResponseEntity.ok(responses);
+    }
+
     @PatchMapping("/file/{*path}")
     @ResponseBody
-    public ResponseEntity<FileResponse> rename(@AuthenticationPrincipal UserDetailsImpl user,
-                                               @PathVariable String path,
-                                               @RequestParam("name") String name) {
-        if (path.isEmpty() || path.equals("/"))
-            throw new StorageInvalidRequestException("Trying to rename a root folder");
+    public ResponseEntity<FileResponse> renameFile(@AuthenticationPrincipal UserDetailsImpl user,
+                                                   @PathVariable String path,
+                                                   @RequestParam("src") String source,
+                                                   @RequestParam("name") String name) {
+        if (source.isEmpty() || name.isEmpty())
+            throw new StorageInvalidRequestException("Invalid parameters for rename request", source);
 
-        Path file = this.storageService.rename(Paths.get(user.getUsername(), path), name);
+        Path file = this.storageService.renameFile(Paths.get(user.getUsername(), path, source), name);
         FileResponse response = this.buildFileResponse(file);
 
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/file/{*path}")
-    public ResponseEntity<?> delete(@AuthenticationPrincipal UserDetailsImpl user,
-                                    @PathVariable String path) {
-        if (path.isEmpty() || path.equals("/"))
-            throw new StorageInvalidRequestException("Trying to delete a root folder");
+    @ResponseBody
+    public ResponseEntity<String> deleteFile(@AuthenticationPrincipal UserDetailsImpl user,
+                                             @PathVariable String path,
+                                             @RequestParam("src") String source) {
+        if (source.isEmpty())
+            throw new StorageInvalidRequestException("Invalid parameters for delete request", source);
 
-        this.storageService.delete(Paths.get(user.getUsername(), path));
+        this.storageService.deleteFile(Paths.get(user.getUsername(), path, source));
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/files/{*path}")
+    @ResponseBody
+    public ResponseEntity<List<String>> deleteFiles(@AuthenticationPrincipal UserDetailsImpl user,
+                                                    @PathVariable String path,
+                                                    @RequestParam("src") String source) {
+        List<String> sources = Arrays.stream(source.split("<")).toList();
+        if (sources.isEmpty() || sources.contains(""))
+            throw new StorageInvalidRequestException("Invalid parameters for delete request", source);
+
+        sources.forEach(filename -> this.storageService.deleteFile(Paths.get(user.getUsername(), path, filename)));
 
         return ResponseEntity.ok().build();
     }

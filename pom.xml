@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.example</groupId>
     <artifactId>cloud-storage</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-RELEASE</version>
     <name>cloud-storage</name>
     <description>Cloud-based storage service</description>
     <properties>
@@ -134,7 +134,7 @@
 
                 <executions>
                     <execution>
-                        <id>install node and npm</id>
+                        <id>install-node-and-npm</id>
                         <goals>
                             <goal>install-node-and-npm</goal>
                         </goals>
@@ -146,7 +146,7 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>npm run build</id>
+                        <id>build-frontend</id>
                         <goals>
                             <goal>npm</goal>
                         </goals>
@@ -160,7 +160,24 @@
                 <artifactId>maven-antrun-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>clean-static-resources</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${project.basedir}/src/main/resources/static"
+                                        includeemptydirs="true"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-static-resources</id>
                         <phase>generate-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
                         <configuration>
                             <target>
                                 <copy todir="${project.basedir}/src/main/resources/static">
@@ -168,9 +185,6 @@
                                 </copy>
                             </target>
                         </configuration>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>

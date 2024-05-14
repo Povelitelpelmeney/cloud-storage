@@ -4,9 +4,7 @@ enum ModalType {
   Error = "error",
   Overwrite = "overwrite",
   Delete = "delete",
-  DeleteSelected = "delete_selected",
-  CreateDirectory = "create_directory",
-  Rename = "rename",
+  Input = "input",
 }
 
 type CallbackType = (input?: string) => Promise<void>;
@@ -23,9 +21,11 @@ type ModalStateType = {
 
 type ActionType = {
   type: ModalType | "close";
+  title?: string;
   list?: string[];
   defaultValue?: string;
   message?: string;
+  multiple?: boolean;
   callback?: CallbackType;
 };
 
@@ -60,33 +60,17 @@ const reducer = (state: ModalStateType, action: ActionType) => {
         show: true,
         type: action.type,
         title: "Delete file",
-        message: "Are you sure you want to delete this file?",
+        message: `Are you sure you want to delete ${
+          action.multiple ? "these files" : "this file"
+        }?`,
         callback: action.callback,
       };
-    case ModalType.DeleteSelected:
+    case ModalType.Input:
       return {
         ...state,
         show: true,
         type: action.type,
-        title: "Delete selected files",
-        message: "Are you sure you want to delete these files?",
-        callback: action.callback,
-      };
-    case ModalType.CreateDirectory:
-      return {
-        ...state,
-        show: true,
-        type: action.type,
-        title: "Create directory",
-        defaultValue: "",
-        callback: action.callback,
-      };
-    case ModalType.Rename:
-      return {
-        ...state,
-        show: true,
-        type: action.type,
-        title: "Rename",
+        title: action.title,
         defaultValue: action.defaultValue,
         callback: action.callback,
       };
@@ -112,20 +96,32 @@ const useModalWindow = () => {
     dispatch({ type: ModalType.Delete, callback });
   };
 
-  const deleteSelectedFiles = (callback: CallbackType) => {
-    dispatch({ type: ModalType.DeleteSelected, callback });
+  const deleteMultipleFiles = (callback: CallbackType) => {
+    dispatch({ type: ModalType.Delete, multiple: true, callback });
   };
 
   const createDirectory = (callback: CallbackType) => {
-    dispatch({ type: ModalType.CreateDirectory, callback });
+    dispatch({
+      type: ModalType.Input,
+      title: "Create directory",
+      defaultValue: "",
+      callback,
+    });
   };
 
   const renameFile = (defaultValue: string, callback: CallbackType) => {
-    dispatch({ type: ModalType.Rename, defaultValue, callback });
+    dispatch({
+      type: ModalType.Input,
+      title: "Rename",
+      defaultValue,
+      callback,
+    });
   };
 
   const closeModal = () => {
+    console.log(state);
     dispatch({ type: "close" });
+    console.log(state);
   };
 
   return {
@@ -134,7 +130,7 @@ const useModalWindow = () => {
       showError,
       overwriteFiles,
       deleteFile,
-      deleteSelectedFiles,
+      deleteMultipleFiles,
       createDirectory,
       renameFile,
       closeModal,

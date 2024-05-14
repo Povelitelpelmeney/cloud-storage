@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AxiosError } from "axios";
 import { IconContext } from "react-icons";
 import {
   FiCheck,
@@ -16,15 +17,16 @@ import ModalWindow from "../ModalWindow/ModalWindow";
 import useContextMenu from "../../hooks/useContextMenu";
 import useModalWindow from "../../hooks/useModalWindow";
 import "./Storage.scss";
-import { AxiosError } from "axios";
 
 const Storage = () => {
   const [path, setPath] = useState<string[]>([]);
   const [files, setFiles] = useState<FileType[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [disabledFiles, setDisabledFiles] = useState<string[]>([]);
-  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+  const [processedFiles, setProcessedFiles] = useState<
+    { filename: string; path: string[] }[]
+  >([]);
   const [draggedFile, setDraggedFile] = useState<string>("");
+  const pathRef = useRef<string[]>(path);
   const uploadInput = useRef<HTMLInputElement>(null);
   const fileIcon = useRef<HTMLDivElement>(null);
   const dirIcon = useRef<HTMLDivElement>(null);
@@ -32,23 +34,28 @@ const Storage = () => {
   const { state: modalState, service: modalService } = useModalWindow();
 
   const selectFile = (fileId: string) => {
-    const index = selectedFiles.indexOf(fileId);
-    if (index === -1) setSelectedFiles((files) => [...files, fileId]);
-    else setSelectedFiles((fileIds) => fileIds.filter((id) => fileId !== id));
+    setSelectedFiles((prevFiles) => [...prevFiles, fileId]);
+  };
+
+  const unselectFile = (fileId: string) => {
+    setSelectedFiles((prevFiles) => prevFiles.filter((id) => id !== fileId));
   };
 
   const selectAll = () => {
     setSelectedFiles(files.map((file) => file.id));
   };
 
-  const enableFile = (filename: string) => {
-    setDisabledFiles((prevFiles) =>
-      prevFiles.filter((name) => filename !== name)
-    );
+  const addProcessedFile = (filename: string, path: string[]) => {
+    setProcessedFiles((prevFiles) => [...prevFiles, { filename, path }]);
   };
 
-  const disableFile = (filename: string) => {
-    setDisabledFiles((prevFiles) => [...prevFiles, filename]);
+  const removeProcessedFile = (filename: string, path: string[]) => {
+    setProcessedFiles((prevFiles) =>
+      prevFiles.filter(
+        (file) =>
+          file.filename !== filename || file.path.join("/") !== path.join("/")
+      )
+    );
   };
 
   const getNameById = (id: string) => {
@@ -56,6 +63,7 @@ const Storage = () => {
   };
 
   const removeFile = (filename: string) => {
+    removeProcessedFile(filename, pathRef.current);
     setSelectedFiles((fileIds) =>
       fileIds.filter((id) => getNameById(id) !== filename)
     );
@@ -103,21 +111,17 @@ const Storage = () => {
   };
 
   const gotoDirectory = (directoryName: string) => {
-    if (disabledFiles.length > 0 || uploadingFiles.length > 0)
-      modalService.showError("Previous task is in process, please wait.");
-    else setPath((path) => [...path, directoryName]);
+    setPath((path) => [...path, directoryName]);
   };
 
   const goBack = () => {
-    if (disabledFiles.length > 0 || uploadingFiles.length > 0)
-      modalService.showError("Previous task is in process, please wait.");
-    else if (path.length > 0) setPath((path) => path.slice(0, -1));
+    if (path.length > 0) setPath((path) => path.slice(0, -1));
   };
 
   const getFiles = useCallback(async () => {
-    const files = await UserService.getFiles(path);
+    const files = await UserService.loadDirectory(pathRef.current);
     setFiles(files);
-  }, [path]);
+  }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const downloadFile = async (filename: string) => {
     const response = await UserService.downloadFile(path, filename);
@@ -139,30 +143,47 @@ const Storage = () => {
     await Promise.all(promises);
   };
 
-  const uploadFile = async (file: File, uploadPath: string[]) => {
+  const uploadFiles = async (files: File[]) => {
+    const srcPath = [...path];
     const formData = new FormData();
-    formData.append("file", file, file.name);
-    setUploadingFiles((prevFiles) => [...prevFiles, file.name]);
-    const response = await UserService.uploadFile(uploadPath, formData).catch(
-      (error: AxiosError) => {
-        setUploadingFiles((prevFiles) =>
-          prevFiles.filter((filename) => filename !== file.name)
-        );
-        throw error;
-      }
-    );
-    if (path === uploadPath) {
-      removeFile(response.name);
-      setFiles((prevFiles) => [...prevFiles, response]);
-      setUploadingFiles((prevFiles) =>
-        prevFiles.filter((filename) => filename !== file.name)
-      );
-    }
-  };
+    files.forEach((file) => {
+      formData.append("files", file, file.name);
+      addProcessedFile(file.name, srcPath);
+    });
 
-  const uploadFiles = async (files: File[], uploadPath: string[]) => {
-    const promises = files.map((file) => uploadFile(file, uploadPath));
-    await Promise.all(promises);
+    try {
+      const response = await UserService.uploadFiles(srcPath, formData);
+
+      response.forEach((file) => removeProcessedFile(file.name, srcPath));
+      if (pathRef.current.join("/") === srcPath.join("/")) {
+        response.forEach((file) => removeFile(file.name));
+        setFiles((prevFiles) => [...prevFiles, ...response]);
+      }
+    } catch (error: unknown) {
+      files.forEach((file) => removeProcessedFile(file.name, srcPath));
+      if (error instanceof AxiosError && error.response?.status === 400) {
+        const invalidFilename = error.response?.data.message.split(/[[\]]/)[1];
+        const invalidIndex = files
+          .map((file) => file.name)
+          .indexOf(invalidFilename);
+
+        if (pathRef.current.join("/") === srcPath.join("/")) {
+          const uploadedFiles = files
+            .filter((_, index) => index < invalidIndex)
+            .map((file) => {
+              return {
+                id: crypto.randomUUID?.(),
+                name: file.name,
+                type: "file",
+                lastModified: file.lastModified,
+                size: file.size,
+              };
+            });
+          setFiles((prevFiles) => [...prevFiles, ...uploadedFiles]);
+        }
+      }
+      throw error;
+    }
   };
 
   const createDirectory = async (directoryName: string) => {
@@ -170,117 +191,203 @@ const Storage = () => {
     setFiles((prevFiles) => [response, ...prevFiles]);
   };
 
-  const moveFile = async (filename: string, targetDir: string) => {
-    disableFile(filename);
-    await UserService.moveFile(path, filename, targetDir).catch(
-      (error: AxiosError<APIError>) => {
-        enableFile(filename);
-        throw error;
+  const moveFiles = async (filenames: string[], destination: string) => {
+    const srcPath = [...path];
+    const destPath =
+      destination === "..." ? path.slice(0, -1) : [...path, destination];
+    setSelectedFiles([]);
+    filenames.forEach((filename) => addProcessedFile(filename, path));
+
+    try {
+      const response = await UserService.moveFiles(
+        srcPath,
+        filenames,
+        destination
+      );
+
+      response.forEach((file) => removeProcessedFile(file.name, srcPath));
+      if (pathRef.current.join("/") === srcPath.join("/")) {
+        filenames.forEach((filename) => removeFile(filename));
+      } else if (pathRef.current.join("/") === destPath.join("/")) {
+        response.forEach((file) => {
+          removeFile(file.name);
+          setFiles((prevFiles) => [...prevFiles, file]);
+        });
       }
-    );
-    removeFile(filename);
-    enableFile(filename);
+    } catch (error: unknown) {
+      filenames.forEach((filename) => removeProcessedFile(filename, srcPath));
+      if (error instanceof AxiosError && error.response?.status === 400) {
+        const invalidFilename = error.response?.data.message.split(/[[\]]/)[1];
+        const invalidIndex = filenames.indexOf(invalidFilename);
+
+        if (pathRef.current.join("/") === srcPath.join("/"))
+          filenames
+            .filter((_, index) => index < invalidIndex)
+            .forEach((filename) => removeFile(filename));
+        else if (pathRef.current.join("/") === destPath.join("/")) getFiles();
+      }
+      throw error;
+    }
   };
 
-  const moveFiles = async (filenames: string[], targetDir: string) => {
-    const promises = filenames.map((filename) => moveFile(filename, targetDir));
-    await Promise.all(promises);
-  };
-
-  const renameFile = async (filename: string, newName: string) => {
-    disableFile(filename);
-    const response = await UserService.renameFile(path, filename, newName);
-    enableFile(filename);
+  const renameFile = async (filename: string, name: string) => {
+    const response = await UserService.renameFile(path, filename, name);
     setFiles((prevFiles) =>
       prevFiles.map((file) => (file.name === filename ? response : file))
     );
   };
 
   const deleteFile = async (filename: string) => {
-    setDisabledFiles((prevFiles) => [...prevFiles, filename]);
-    await UserService.deleteFile(path, filename).catch(
-      (error: AxiosError<APIError>) => {
-        enableFile(filename);
-        throw error;
-      }
-    );
-    removeFile(filename);
-    enableFile(filename);
+    const srcPath = [...path];
+    unselectFile(getNameById(filename) || "");
+    addProcessedFile(filename, srcPath);
+
+    try {
+      await UserService.deleteFile(srcPath, filename);
+      removeProcessedFile(filename, srcPath);
+      if (pathRef.current.join("/") === srcPath.join("/")) removeFile(filename);
+    } catch (error: unknown) {
+      removeProcessedFile(filename, srcPath);
+      throw error;
+    }
   };
 
-  const deleteSelected = async () => {
-    const promises = selectedFiles
-      .map(getNameById)
-      .map((filename) => deleteFile(filename!));
-    await Promise.all(promises);
+  const deleteFiles = async (filenames: string[]) => {
+    const srcPath = [...path];
+    setSelectedFiles([]);
+    filenames.forEach((filename) => addProcessedFile(filename, srcPath));
+
+    try {
+      await UserService.deleteFiles(srcPath, filenames);
+      filenames.forEach((filename) => removeProcessedFile(filename, srcPath));
+      if (pathRef.current.join("/") === srcPath.join("/"))
+        filenames.forEach((filename) => removeFile(filename));
+    } catch (error: unknown) {
+      filenames.forEach((filename) => removeProcessedFile(filename, srcPath));
+      throw error;
+    }
   };
 
   const modalUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const filesToUpload = e.target.files ? Array.from(e.target.files) : [];
     uploadInput.current!.value = "";
-    const uploadingNow = filesToUpload
+
+    const processingNow = filesToUpload
       .map((file) => file.name)
-      .some((name) => uploadingFiles.includes(name));
-    if (uploadingNow) {
-      modalService.showError("Uploading these files right now, please wait");
+      .some((filename) => processedFiles.includes({ filename, path }));
+
+    if (processingNow) {
+      modalService.showError("Processing these files right now, please wait");
       return;
     }
+
     const duplicates = filesToUpload
       .map((file) => file.name)
       .filter((name) => files.map((file) => file.name).includes(name));
+
     if (duplicates.length > 0) {
       modalService.overwriteFiles(duplicates, async () => {
-        await uploadFiles(filesToUpload, path).catch(
-          (error: AxiosError<APIError>) => {
-            if (error.response?.status === 400)
-              modalService.showError(error.response?.data.message);
+        try {
+          await uploadFiles(filesToUpload);
+          modalService.closeModal();
+        } catch (error: unknown) {
+          if (error instanceof AxiosError && error.response?.status === 400)
+            modalService.showError(error.response?.data.message);
+          else if (error instanceof AxiosError && error.code === "ERR_NETWORK")
+            modalService.showError("Maximum upload size exceeded (1 GB)");
+          else {
+            modalService.closeModal();
             throw error;
           }
-        );
+        }
       });
-    } else uploadFiles(filesToUpload, path);
+    } else await uploadFiles(filesToUpload);
   };
 
   const modalCreateDirectory = async () => {
     modalService.createDirectory(async (input?: string) => {
-      if (input) return await createDirectory(input);
+      try {
+        if (input) await createDirectory(input);
+        modalService.closeModal();
+      } catch (error: unknown) {
+        if (!(error instanceof AxiosError) || error.response?.status !== 400)
+          modalService.closeModal();
+        throw error;
+      }
     });
   };
 
-  const modalMoveFiles = async (filenames: string[], targetDir: string) => {
-    const newPath =
-      targetDir === "..." ? path.slice(0, -1) : [...path, targetDir];
-    const response = await UserService.getFiles(newPath);
+  const modalMoveFiles = async (filenames: string[], destination: string) => {
+    const target =
+      destination === "..." ? path.slice(0, -1) : [...path, destination];
+
+    const response = await UserService.loadDirectory(target);
+
     const duplicates = response
       .filter((file) => filenames.includes(file.name))
       .map((file) => file.name);
+
     if (duplicates.length > 0) {
       modalService.overwriteFiles(duplicates, async () => {
-        setSelectedFiles([]);
-        await moveFiles(filenames, targetDir).catch(
-          (error: AxiosError<APIError>) => {
-            if (error.response?.status === 400)
-              modalService.showError(error.response?.data.message);
+        try {
+          await moveFiles(filenames, destination);
+          modalService.closeModal();
+        } catch (error: unknown) {
+          if (error instanceof AxiosError && error.response?.status === 400)
+            modalService.showError(error.response?.data.message);
+          else {
+            modalService.closeModal();
             throw error;
           }
-        );
+        }
       });
-    } else await moveFiles(filenames, targetDir);
+    } else moveFiles(filenames, destination);
   };
 
   const modalRenameFile = async (filename: string) => {
     modalService.renameFile(filename, async (input?: string) => {
-      if (input) return await renameFile(filename, input);
+      try {
+        if (input) await renameFile(filename, input);
+        modalService.closeModal();
+      } catch (error: unknown) {
+        if (!(error instanceof AxiosError) || error.response?.status !== 400)
+          modalService.closeModal();
+        throw error;
+      }
     });
   };
 
   const modalDeleteFile = async (filename: string) => {
-    modalService.deleteFile(() => deleteFile(filename));
+    modalService.deleteFile(async () => {
+      try {
+        await deleteFile(filename);
+        modalService.closeModal();
+      } catch (error: unknown) {
+        modalService.closeModal();
+        throw error;
+      }
+    });
   };
 
-  const modalDeleteSelected = async () => {
-    modalService.deleteSelectedFiles(() => deleteSelected());
+  const modalDeleteSelectedFiles = async () => {
+    const selectedFilenames: string[] = selectedFiles
+      .map((id) => getNameById(id))
+      .filter((name): name is string => typeof name === "string");
+
+    modalService.deleteMultipleFiles(async () => {
+      try {
+        await deleteFiles(selectedFilenames);
+        modalService.closeModal();
+      } catch (error: unknown) {
+        modalService.closeModal();
+        throw error;
+      }
+    });
   };
+
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
 
   useEffect(() => {
     setSelectedFiles([]);
@@ -293,11 +400,7 @@ const Storage = () => {
         className="upload-input"
         ref={uploadInput}
         type="file"
-        onChange={(e) => {
-          modalUploadFiles(e).catch(() => {
-            modalService.showError("Maximum upload size exceeded (1 GB)");
-          });
-        }}
+        onChange={modalUploadFiles}
         multiple
       />
 
@@ -328,7 +431,7 @@ const Storage = () => {
               <span className="icon-tooltip">Download files</span>
             </div>
             <div className="icon-wrapper">
-              <FiTrash2 onClick={modalDeleteSelected} />
+              <FiTrash2 onClick={modalDeleteSelectedFiles} />
               <span className="icon-tooltip">Delete files</span>
             </div>
           </IconContext.Provider>
@@ -355,10 +458,18 @@ const Storage = () => {
             type={file.type}
             lastModified={file.lastModified}
             size={file.type === "file" ? file.size : -1}
-            disabled={disabledFiles.includes(file.name)}
+            disabled={processedFiles.some(
+              (processedFile) =>
+                processedFile.filename === file.name &&
+                processedFile.path.join("/") === path.join("/")
+            )}
             selected={selectedFiles.includes(file.id)}
             dragged={draggedFile === file.name}
-            select={() => selectFile(file.id)}
+            select={() =>
+              selectedFiles.includes(file.id)
+                ? unselectFile(file.id)
+                : selectFile(file.id)
+            }
             {...(file.type === "directory" && {
               goto: () => gotoDirectory(file.name),
             })}
@@ -368,16 +479,20 @@ const Storage = () => {
           />
         ))}
 
-        {uploadingFiles.map((filename) => (
-          <FileComponent
-            key={filename}
-            name={filename}
-            type={"file"}
-            lastModified={-1}
-            size={-1}
-            disabled={true}
-          />
-        ))}
+        {processedFiles
+          .filter((file) => file.path.join("/") === path.join("/"))
+          .map((file) => file.filename)
+          .filter((name) => !files.map((file) => file.name).includes(name))
+          .map((filename) => (
+            <FileComponent
+              key={crypto.randomUUID?.()}
+              name={filename}
+              type={"file"}
+              lastModified={-1}
+              size={-1}
+              disabled={true}
+            />
+          ))}
       </div>
 
       {contextState.active && (

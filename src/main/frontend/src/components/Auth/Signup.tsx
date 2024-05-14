@@ -39,21 +39,23 @@ const Signup = () => {
         )
         .required("This field is required!"),
     }),
-    onSubmit: (values) => {
-      setMessage("");
-      handleSignup(values).catch((error: AxiosError<APIError>) => {
-        if (error.response?.status === 409)
+    onSubmit: async (values) => {
+      try {
+        setMessage("");
+        setLoading(true);
+        await handleSignup(values);
+        setLoading(false);
+      } catch (error: unknown) {
+        if (error instanceof AxiosError && error.response?.status === 409)
           setMessage(error.response.data.message);
         setLoading(false);
-      });
+      }
     },
   });
 
   const handleSignup = useCallback(
     async (values: SignupRequest) => {
-      setLoading(true);
       await AuthService.signup(values);
-      setLoading(false);
       navigate("/login");
     },
     [navigate]

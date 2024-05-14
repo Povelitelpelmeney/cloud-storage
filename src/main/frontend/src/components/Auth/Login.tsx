@@ -21,21 +21,23 @@ const Login = () => {
       username: Yup.string().required("This field is required!"),
       password: Yup.string().required("This field is required!"),
     }),
-    onSubmit: (values) => {
-      setMessage("");
-      handleLogin(values).catch((error: AxiosError<APIError>) => {
-        if (error.response?.status === 401)
+    onSubmit: async (values) => {
+      try {
+        setMessage("");
+        setLoading(true);
+        await handleLogin(values);
+        setLoading(false);
+      } catch (error: unknown) {
+        if (error instanceof AxiosError && error.response?.status === 401)
           setMessage("Incorrect username or password");
         setLoading(false);
-      });
+      }
     },
   });
 
   const handleLogin = useCallback(
     async (values: LoginRequest) => {
-      setLoading(true);
       await AuthService.login(values);
-      setLoading(false);
       navigate("/");
       window.location.reload();
     },

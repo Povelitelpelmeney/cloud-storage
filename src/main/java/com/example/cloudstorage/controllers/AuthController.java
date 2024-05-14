@@ -72,7 +72,7 @@ public class AuthController {
         );
 
         try {
-            this.storageService.load(Paths.get(userDetails.getUsername()));
+            this.storageService.loadFile(Paths.get(userDetails.getUsername()));
         } catch (StorageFileNotFoundException ex) {
             this.storageService.createDirectory(Paths.get(""), userDetails.getUsername());
         }

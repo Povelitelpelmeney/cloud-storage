@@ -9,7 +9,7 @@ import java.util.List;
 public interface StorageService {
     void init();
 
-    Path load(Path path);
+    Path loadFile(Path path);
 
     List<Path> loadDirectory(Path path);
 
@@ -19,9 +19,9 @@ public interface StorageService {
 
     Path createDirectory(Path path, String name);
 
-    Path move(Path path, String newDirectory);
+    Path moveFile(Path path, String destination);
 
-    Path rename(Path path, String newName);
+    Path renameFile(Path path, String newName);
 
-    void delete(Path path);
+    void deleteFile(Path path);
 }

@@ -9,14 +9,8 @@ type ModalWindowProps = {
   onClose: () => void;
 };
 
-const infoTypes = [
-  ModalType.Error,
-  ModalType.Overwrite,
-  ModalType.Delete,
-  ModalType.DeleteSelected,
-];
-
-const inputTypes = [ModalType.CreateDirectory, ModalType.Rename];
+const infoTypes = [ModalType.Error, ModalType.Overwrite, ModalType.Delete];
+const inputType = ModalType.Input;
 
 const ModalWindow = (props: ModalWindowProps) => {
   const [input, setInput] = useState<string>(props.state.defaultValue || "");
@@ -36,11 +30,19 @@ const ModalWindow = (props: ModalWindowProps) => {
     if (!props.state.type || !props.state.callback || loading) return;
 
     setLoading(true);
-    if (infoTypes.includes(props.state.type)) await props.state.callback();
-    else if (inputTypes.includes(props.state.type))
-      await props.state.callback(input);
-    setLoading(false);
-    props.onClose();
+
+    try {
+      if (infoTypes.includes(props.state.type)) await props.state.callback();
+      else if (inputType === props.state.type)
+        await props.state.callback(input);
+      setLoading(false);
+    } catch (error: unknown) {
+      setLoading(false);
+      if (error instanceof AxiosError && error.response?.status === 400) {
+        console.log('hi')
+        setWarning(error.response?.data.message.split(/: /)[1]);
+      } else throw error;
+    }
   };
 
   useEffect(() => setWarning(""), [props.state.show]);
@@ -74,12 +76,11 @@ const ModalWindow = (props: ModalWindowProps) => {
               </>
             )}
 
-            {(props.state.type === ModalType.Delete ||
-              props.state.type === ModalType.DeleteSelected) && (
+            {props.state.type === ModalType.Delete && (
               <p className="text">{props.state.message}</p>
             )}
 
-            {inputTypes.includes(props.state.type) && (
+            {inputType.includes(props.state.type) && (
               <Form onSubmit={handelSubmit}>
                 <FormGroup>
                   <Form.Control
@@ -104,15 +105,7 @@ const ModalWindow = (props: ModalWindowProps) => {
               Close
             </Button>
             {props.state.type !== ModalType.Error && (
-              <Button
-                variant="primary"
-                onClick={() =>
-                  submit().catch((error: AxiosError<APIError>) => {
-                    setLoading(false);
-                    setWarning(error.response?.data.message || error.message);
-                  })
-                }
-              >
+              <Button variant="primary" onClick={submit}>
                 Confirm
                 {loading && (
                   <span className="spinner-border spinner-border-sm"></span>

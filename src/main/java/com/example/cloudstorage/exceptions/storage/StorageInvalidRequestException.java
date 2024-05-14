@@ -10,11 +10,11 @@ public class StorageInvalidRequestException extends StorageException {
     @Serial
     private static final long serialVersionUID = 1;
 
-    public StorageInvalidRequestException(String message) {
-        super(message);
+    public StorageInvalidRequestException(String message, String source) {
+        super(String.format("Failed for [%s]: %s", source, message));
     }
 
-    public StorageInvalidRequestException(String message, Throwable cause) {
-        super(message, cause);
+    public StorageInvalidRequestException(String message, String source, Throwable cause) {
+        super(String.format("Failed for [%s]: %s", source, message), cause);
     }
 }
