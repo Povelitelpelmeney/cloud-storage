@@ -1,5 +1,5 @@
 # cloud-storage
-### Cloud-based storage service using Spring Boot + React
+## Cloud-based storage service using Spring Boot + React
 
 ## Getting Started
 ### 1. Clone the Repository:
