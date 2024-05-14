@@ -89,7 +89,6 @@ const moveFiles = async (
     .map((source) => encodeURIComponent(source))
     .join("<");
   const encodedDestination = encodeURIComponent(destination);
-  console.log(encodedPath, encodedSources, encodedDestination);
   const URI =
     path.length > 0
       ? `${baseURI}/files/${encodedPath}?src=${encodedSources}&dest=${encodedDestination}`

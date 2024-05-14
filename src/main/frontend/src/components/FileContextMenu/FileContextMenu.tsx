@@ -1,4 +1,4 @@
-import "./FileContexMenu.scss";
+import "./FileContextMenu.scss";
 
 type FileContexMenuProps = {
   filename: string;

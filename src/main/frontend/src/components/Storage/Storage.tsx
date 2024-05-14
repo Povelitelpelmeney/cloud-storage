@@ -1,31 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AxiosError } from "axios";
 import { IconContext } from "react-icons";
-import {
-  FiCheck,
-  FiUpload,
-  FiFolderPlus,
-  FiDownload,
-  FiTrash2,
-} from "react-icons/fi";
-import { RxCross2 } from "react-icons/rx";
+import { FiUpload, FiFolderPlus, FiDownload, FiTrash2 } from "react-icons/fi";
+import { RxCheck, RxCross2 } from "react-icons/rx";
 import { FcFile, FcFolder } from "react-icons/fc";
 import UserService from "../../services/user-service";
 import FileComponent from "../FileComponent/FileComponent";
-import FileContexMenu from "../FileContexMenu/FileContexMenu";
+import FileContextMenu from "../FileContextMenu/FileContextMenu";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import useContextMenu from "../../hooks/useContextMenu";
 import useModalWindow from "../../hooks/useModalWindow";
 import "./Storage.scss";
 
 const Storage = () => {
+  const [inRoot, setInRoot] = useState<boolean>(true);
   const [path, setPath] = useState<string[]>([]);
   const [files, setFiles] = useState<FileType[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [processedFiles, setProcessedFiles] = useState<
-    { filename: string; path: string[] }[]
-  >([]);
-  const [draggedFile, setDraggedFile] = useState<string>("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [processed, setProcessed] = useState<[string, string[]][]>([]);
+  const [dragged, setDragged] = useState<string>("");
   const pathRef = useRef<string[]>(path);
   const uploadInput = useRef<HTMLInputElement>(null);
   const fileIcon = useRef<HTMLDivElement>(null);
@@ -34,26 +27,26 @@ const Storage = () => {
   const { state: modalState, service: modalService } = useModalWindow();
 
   const selectFile = (fileId: string) => {
-    setSelectedFiles((prevFiles) => [...prevFiles, fileId]);
+    setSelected((prevFiles) => [...prevFiles, fileId]);
   };
 
   const unselectFile = (fileId: string) => {
-    setSelectedFiles((prevFiles) => prevFiles.filter((id) => id !== fileId));
+    setSelected((prevFiles) => prevFiles.filter((id) => id !== fileId));
   };
 
   const selectAll = () => {
-    setSelectedFiles(files.map((file) => file.id));
+    setSelected(files.map((file) => file.id));
   };
 
-  const addProcessedFile = (filename: string, path: string[]) => {
-    setProcessedFiles((prevFiles) => [...prevFiles, { filename, path }]);
+  const addProcessedFile = (name: string, path: string[]) => {
+    setProcessed((prevFiles) => [...prevFiles, [name, path]]);
   };
 
-  const removeProcessedFile = (filename: string, path: string[]) => {
-    setProcessedFiles((prevFiles) =>
+  const removeProcessedFile = (name: string, path: string[]) => {
+    setProcessed((prevFiles) =>
       prevFiles.filter(
-        (file) =>
-          file.filename !== filename || file.path.join("/") !== path.join("/")
+        ([filename, filepath]) =>
+          filename !== name || filepath.join("/") !== path.join("/")
       )
     );
   };
@@ -64,7 +57,7 @@ const Storage = () => {
 
   const removeFile = (filename: string) => {
     removeProcessedFile(filename, pathRef.current);
-    setSelectedFiles((fileIds) =>
+    setSelected((fileIds) =>
       fileIds.filter((id) => getNameById(id) !== filename)
     );
     setFiles((files) => files.filter((file) => file.name !== filename));
@@ -74,15 +67,13 @@ const Storage = () => {
     e: React.DragEvent<HTMLDivElement>,
     filename: string
   ) => {
-    setDraggedFile(filename);
+    setDragged(filename);
     let filesToMove = [];
 
-    const selected = selectedFiles.some((id) => getNameById(id) === filename);
-
-    if (selected) {
-      filesToMove = selectedFiles.map(getNameById);
+    if (selected.some((id) => getNameById(id) === filename)) {
+      filesToMove = selected.map(getNameById);
     } else {
-      setSelectedFiles([]);
+      setSelected([]);
       filesToMove = [filename];
     }
 
@@ -121,6 +112,7 @@ const Storage = () => {
   const getFiles = useCallback(async () => {
     const files = await UserService.loadDirectory(pathRef.current);
     setFiles(files);
+    path.length > 0 ? setInRoot(false) : setInRoot(true);
   }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const downloadFile = async (filename: string) => {
@@ -137,7 +129,7 @@ const Storage = () => {
   };
 
   const downloadSelected = async () => {
-    const promises = selectedFiles
+    const promises = selected
       .map(getNameById)
       .map((filename) => downloadFile(filename!));
     await Promise.all(promises);
@@ -195,7 +187,7 @@ const Storage = () => {
     const srcPath = [...path];
     const destPath =
       destination === "..." ? path.slice(0, -1) : [...path, destination];
-    setSelectedFiles([]);
+    setSelected([]);
     filenames.forEach((filename) => addProcessedFile(filename, path));
 
     try {
@@ -254,7 +246,7 @@ const Storage = () => {
 
   const deleteFiles = async (filenames: string[]) => {
     const srcPath = [...path];
-    setSelectedFiles([]);
+    setSelected([]);
     filenames.forEach((filename) => addProcessedFile(filename, srcPath));
 
     try {
@@ -274,7 +266,7 @@ const Storage = () => {
 
     const processingNow = filesToUpload
       .map((file) => file.name)
-      .some((filename) => processedFiles.includes({ filename, path }));
+      .some((filename) => processed.includes([filename, path]));
 
     if (processingNow) {
       modalService.showError("Processing these files right now, please wait");
@@ -370,7 +362,7 @@ const Storage = () => {
   };
 
   const modalDeleteSelectedFiles = async () => {
-    const selectedFilenames: string[] = selectedFiles
+    const selectedFilenames: string[] = selected
       .map((id) => getNameById(id))
       .filter((name): name is string => typeof name === "string");
 
@@ -390,7 +382,7 @@ const Storage = () => {
   }, [path]);
 
   useEffect(() => {
-    setSelectedFiles([]);
+    setSelected([]);
     getFiles();
   }, [getFiles]);
 
@@ -405,10 +397,10 @@ const Storage = () => {
       />
 
       <div className="menu-bar">
-        {selectedFiles.length === 0 ? (
+        {selected.length === 0 ? (
           <IconContext.Provider value={{ className: "icon", size: "40" }}>
             <div className="icon-wrapper">
-              <FiCheck onClick={selectAll} />
+              <RxCheck onClick={selectAll} size="40" />
               <span className="icon-tooltip">Select all</span>
             </div>
             <div className="icon-wrapper">
@@ -423,7 +415,7 @@ const Storage = () => {
         ) : (
           <IconContext.Provider value={{ className: "icon", size: "40" }}>
             <div className="icon-wrapper">
-              <RxCross2 onClick={() => setSelectedFiles([])} />
+              <RxCross2 onClick={() => setSelected([])} />
               <span className="icon-tooltip">Cancel selection</span>
             </div>
             <div className="icon-wrapper">
@@ -439,7 +431,7 @@ const Storage = () => {
       </div>
 
       <div className="files">
-        {path.length > 0 && (
+        {!inRoot && (
           <FileComponent
             name={"..."}
             type={"directory"}
@@ -458,15 +450,14 @@ const Storage = () => {
             type={file.type}
             lastModified={file.lastModified}
             size={file.type === "file" ? file.size : -1}
-            disabled={processedFiles.some(
-              (processedFile) =>
-                processedFile.filename === file.name &&
-                processedFile.path.join("/") === path.join("/")
+            disabled={processed.some(
+              ([filename, filepath]) =>
+                filename === file.name && filepath.join("/") === path.join("/")
             )}
-            selected={selectedFiles.includes(file.id)}
-            dragged={draggedFile === file.name}
+            selected={selected.includes(file.id)}
+            dragged={dragged === file.name}
             select={() =>
-              selectedFiles.includes(file.id)
+              selected.includes(file.id)
                 ? unselectFile(file.id)
                 : selectFile(file.id)
             }
@@ -479,9 +470,9 @@ const Storage = () => {
           />
         ))}
 
-        {processedFiles
-          .filter((file) => file.path.join("/") === path.join("/"))
-          .map((file) => file.filename)
+        {processed
+          .filter(([_, filepath]) => filepath.join("/") === path.join("/"))
+          .map(([filename, _]) => filename)
           .filter((name) => !files.map((file) => file.name).includes(name))
           .map((filename) => (
             <FileComponent
@@ -496,7 +487,7 @@ const Storage = () => {
       </div>
 
       {contextState.active && (
-        <FileContexMenu
+        <FileContextMenu
           filename={contextState.filename}
           download={downloadFile}
           rename={modalRenameFile}

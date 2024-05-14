@@ -39,7 +39,6 @@ const ModalWindow = (props: ModalWindowProps) => {
     } catch (error: unknown) {
       setLoading(false);
       if (error instanceof AxiosError && error.response?.status === 400) {
-        console.log('hi')
         setWarning(error.response?.data.message.split(/: /)[1]);
       } else throw error;
     }

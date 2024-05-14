@@ -119,9 +119,7 @@ const useModalWindow = () => {
   };
 
   const closeModal = () => {
-    console.log(state);
     dispatch({ type: "close" });
-    console.log(state);
   };
 
   return {
