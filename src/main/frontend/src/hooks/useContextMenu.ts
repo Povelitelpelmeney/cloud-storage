@@ -6,7 +6,7 @@ type Point = {
   y: number;
 };
 
-type ContexMenuStateType = {
+type ContextMenuStateType = {
   active: boolean;
   filename: string;
   point: Point;
@@ -32,7 +32,10 @@ type ContextMenuActionType =
   | SetFilenameAction
   | SetPointAction;
 
-const reducer = (state: ContexMenuStateType, action: ContextMenuActionType) => {
+const reducer = (
+  state: ContextMenuStateType,
+  action: ContextMenuActionType
+) => {
   switch (action.type) {
     case "set_active_state": {
       return { ...state, active: action.active };

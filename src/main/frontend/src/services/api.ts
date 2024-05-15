@@ -4,7 +4,6 @@ import TokenService from "./token-service";
 import eventBus from "../common/eventBus";
 
 const instance = axios.create({
-  baseURL: "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
   },
