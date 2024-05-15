@@ -1,6 +1,6 @@
 import "./FileContextMenu.scss";
 
-type FileContexMenuProps = {
+type FileContextMenuProps = {
   filename: string;
   top: number;
   left: number;
@@ -9,7 +9,7 @@ type FileContexMenuProps = {
   delete: (filename: string) => Promise<void>;
 };
 
-const FileContexMenu = (props: FileContexMenuProps) => {
+const FileContextMenu = (props: FileContextMenuProps) => {
   return (
     <div className="context-menu" style={{ top: props.top, left: props.left }}>
       <div
@@ -34,4 +34,4 @@ const FileContexMenu = (props: FileContexMenuProps) => {
   );
 };
 
-export default FileContexMenu;
+export default FileContextMenu;

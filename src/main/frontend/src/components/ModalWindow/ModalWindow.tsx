@@ -17,16 +17,12 @@ const ModalWindow = (props: ModalWindowProps) => {
   const [warning, setWarning] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handelSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
     setWarning("");
   };
 
-  const submit = async () => {
+  const handleSubmit = async () => {
     if (!props.state.type || !props.state.callback || loading) return;
 
     setLoading(true);
@@ -79,8 +75,8 @@ const ModalWindow = (props: ModalWindowProps) => {
               <p className="text">{props.state.message}</p>
             )}
 
-            {inputType.includes(props.state.type) && (
-              <Form onSubmit={handelSubmit}>
+            {props.state.type === ModalType.Input && (
+              <Form onSubmit={(e) => e.preventDefault()}>
                 <FormGroup>
                   <Form.Control
                     className="input-field"
@@ -104,7 +100,7 @@ const ModalWindow = (props: ModalWindowProps) => {
               Close
             </Button>
             {props.state.type !== ModalType.Error && (
-              <Button variant="primary" onClick={submit}>
+              <Button variant="primary" onClick={handleSubmit}>
                 Confirm
                 {loading && (
                   <span className="spinner-border spinner-border-sm"></span>
